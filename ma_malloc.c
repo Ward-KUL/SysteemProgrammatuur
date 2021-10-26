@@ -3,6 +3,7 @@
  */
 
 #include "ma_malloc.h"
+#include <stddef.h>
 
 #define MEM_POOL_SIZE 600   //in bytes
 typedef unsigned char byte;
@@ -18,6 +19,12 @@ typedef struct {
     mem_status status;
 } mem_chunk_header;
 
+typedef struct{
+    size size;
+    mem_status status;
+}
+mem_chunk_footer;
+
 
 static byte mem_pool[MEM_POOL_SIZE];
 
@@ -28,6 +35,15 @@ static byte mem_pool[MEM_POOL_SIZE];
 void ma_init() {
 
     //TODO: add your code here
+    for(int i = 0; i<MEM_POOL_SIZE;i ++){
+        mem_pool[i] = 0;
+    }
+    mem_chunk_header* mainHeader =  (mem_chunk_header*)&mem_pool;
+    mainHeader->size = MEM_POOL_SIZE - sizeof(mem_chunk_header) - sizeof(mem_chunk_footer);
+    mainHeader->status = FREE;
+    mem_chunk_footer* mainFooter = (mem_chunk_footer*)&mem_pool + sizeof(mem_chunk_header);
+    mainFooter->status = FREE;
+    mainFooter->size = MEM_POOL_SIZE - sizeof(mem_chunk_header) - sizeof(mem_chunk_footer);
 
 }
 
@@ -38,6 +54,29 @@ void ma_init() {
 void *ma_malloc(size tsize) {
 
     //TODO: add your code here
+    mem_chunk_header* HeaderPointer = (mem_chunk_header*)&mem_pool;
+    int currentByte = 0;
+    while(currentByte < MEM_POOL_SIZE){
+        if(HeaderPointer->status == ALLOCATED){
+            currentByte += HeaderPointer->size;
+            HeaderPointer += currentByte;
+            if(HeaderPointer->size == 0){
+                HeaderPointer->status = FREE;
+                HeaderPointer->size = MEM_POOL_SIZE - currentByte - sizeof(mem_chunk_header);
+            }
+        }
+        else{
+            if(HeaderPointer->size < tsize){
+                return NULL;
+            }
+            else{
+                HeaderPointer->size = tsize;
+                HeaderPointer->status = ALLOCATED;
+                return HeaderPointer + sizeof(mem_chunk_header);
+            }
+        }
+    }
+    return NULL;
 
 }
 
