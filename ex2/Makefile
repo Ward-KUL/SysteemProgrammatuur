@@ -13,7 +13,29 @@ test : dplist.c dplist_test.c
 	@echo -e '\n*************************'
 	@echo -e '*** Running UNIT TEST ***'
 	@echo -e '*************************'
-	./build/dplist_test
+	./build/dplist_test 
+
+test_valgrind: dplist.c dplist_test.c
+	@echo -e '\n*******************************'
+	@echo -e '*** Compiling for UNIT TEST valgrind***'
+	@echo -e '*******************************'
+	mkdir -p build
+	gcc dplist.c dplist_test.c -o build/dplist_test $(FLAGS)
+	@echo -e '\n*************************'
+	@echo -e '*** Running UNIT TEST valgrind ***'
+	@echo -e '*************************'
+	valgrind --leak-check=yes ./build/dplist_test 
+
+test_debug : dplist.c dplist_test.c
+	@echo -e '\n*******************************'
+	@echo -e '*** Compiling for UNIT TEST DEBUG***'
+	@echo -e '*******************************'
+	mkdir -p build
+	gcc dplist.c dplist_test.c -o build/dplist_test $(FLAGS) -g
+	@echo -e '\n*************************'
+	@echo -e '*** Running UNIT TEST DEBUG***'
+	@echo -e '*************************'
+	export CK_FORK=no; gdb -q -tui ./build/dplist_test
 
 .PHONY : clean check
 
