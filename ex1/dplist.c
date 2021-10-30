@@ -7,6 +7,7 @@
 #include <assert.h>
 #include "dplist.h"
 
+
 //#define DEBUG
 
 /*
@@ -31,7 +32,7 @@
 #define DPLIST_ERR_HANDLER(condition, err_code)                         \
     do {                                                                \
             if ((condition)) DEBUG_PRINTF(#condition " failed\n");      \
-            assert(!(condition));                                       \
+            assert(!(condition));                                    \
         } while(0)
 
 
@@ -57,10 +58,18 @@ dplist_t *dpl_create() {
     return list;
 }
 
+
+
 void dpl_free(dplist_t **list) {
-
-    //TODO: add your code here
-
+    dplist_node_t* node = (*list)->head;
+    *list = NULL;
+    dplist_node_t* previousNode = NULL;
+    while(node != NULL){
+        previousNode = node;
+        //printf("Free function: %d\n",previousNode->element);
+        node = node->next;
+        free(previousNode);
+    }
 }
 
 /* Important note: to implement any list manipulation operator (insert, append, delete, sort, ...), always be aware of the following cases:
@@ -113,20 +122,47 @@ dplist_t *dpl_insert_at_index(dplist_t *list, element_t element, int index) {
 
 dplist_t *dpl_remove_at_index(dplist_t *list, int index) {
 
-    //TODO: add your code here
-
+    dplist_node_t *node;
+    node = list->head;
+    if(list == NULL) return NULL;
+    unsigned int size = dpl_size(list);
+    if(index<=0) {
+        list->head = node->next;
+        free(node);
+        return list;
+    }
+    else if(index>(size-1)) index = size -1;
+    //loop till at the correct node
+    int i = 0;
+    while(i <(index)){
+        DPLIST_ERR_HANDLER(node==NULL,DPLIST_MEMORY_ERROR);
+        node = node->next;
+        i++;    
+    }
+    //arived at the correct index -1
+    //make node point to the next one
+    node->prev->next = node->next;
+    free(node);
+    return list;
 }
 
 int dpl_size(dplist_t *list) {
 
-    //TODO: add your code here
-    return -1;
+    if(list == NULL) return -1;
+    else{
+        int length = 0;
+        dplist_node_t* node = list->head;
+        while(node != NULL){
+            length++;
+            node = node->next;
+        }
+        return length;
+    }
 }
 
 dplist_node_t *dpl_get_reference_at_index(dplist_t *list, int index) {
     int count;
     dplist_node_t *dummy;
-    DPLIST_ERR_HANDLER(list == NULL, DPLIST_INVALID_ERROR);
     if (list->head == NULL) return NULL;
     for (dummy = list->head, count = 0; dummy->next != NULL; dummy = dummy->next, count++) {
         if (count >= index) return dummy;
@@ -135,16 +171,50 @@ dplist_node_t *dpl_get_reference_at_index(dplist_t *list, int index) {
 }
 
 element_t dpl_get_element_at_index(dplist_t *list, int index) {
-
-    //TODO: add your code here
+    if(list == NULL) return -1;
+    dplist_node_t* node = list->head;
+    if(index<=0) 
+    {
+        return node->element;
+    }
+    int sizeList = dpl_size(list);
+    if(index>=sizeList) index = (sizeList-1);
+    int i = 0;
+    while(i < (index-1)){
+        node = node->next;
+        i++;
+        if(node->next == NULL) return -1;
+    }
+    return node->next->element;
 
 }
 
 int dpl_get_index_of_element(dplist_t *list, element_t element) {
 
-    //TODO: add your code here
-
+    if(list == NULL) return -1;
+    dplist_node_t* node = list->head;
+    //dplist_node_t* previousNode;
+    int index = 0;
+    while(node->element != element){
+        if(node == NULL) return -1; //element not found
+        node = node->next;
+        index++;
+    }
+    return index;
 }
+
+void dpl_print_list(dplist_t *list){
+    if(list == NULL) return;
+    dplist_node_t *node = list->head;
+    printf("The list contains the following values:\n");
+    while(node != NULL){
+        printf("%d  ",node->element);
+        node = node->next;
+    }
+    printf("\n");
+}
+
+
 
 
 
