@@ -219,6 +219,21 @@ START_TEST(test_remove){
 }
 END_TEST
 
+START_TEST(test_size){
+    dplist_t* list = NULL;
+    ck_assert_msg(dpl_size(list) == -1,"F");
+    list = dpl_create(element_copy,element_free,element_compare);
+    ck_assert_msg(dpl_size(list) == 0,"F");
+    my_element_t* e = make_element(1,'d');
+    dpl_insert_at_index(list,e,0,false);
+    ck_assert_msg(dpl_size(list) == 1,"F");
+    dpl_insert_at_index(list,e,0,true);
+    ck_assert_msg(dpl_size(list) == 2,"F");
+    dpl_free(&list,true);
+
+}
+END_TEST
+
 //START_TEST(test_nameOfYourTest)
 //  Add other testcases here...
 //END_TEST
@@ -234,6 +249,8 @@ int main(void) {
     tcase_add_test(tc1_1, test_ListFree);
     tcase_add_test(tc1_1,test_remove);
     tcase_add_test(tc1_1,test_insert);
+    tcase_add_test(tc1_1,test_size);
+    
     // Add other tests here...
 
     srunner_run_all(sr, CK_VERBOSE);
