@@ -142,13 +142,15 @@ dplist_node_t* create_new_node(void* element){
 }
 
 dplist_t *dpl_remove_at_index(dplist_t *list, int index, bool free_element) {
-    dplist_node_t* node;
-    node = list->head;
     if(list == NULL) return NULL;
+    dplist_node_t* node;
+    if(list->head == NULL) return list;
+    node = list->head;
     unsigned int size = dpl_size(list);
     if(index<=0) {
         list->head = node->next;
-        list->element_free(node->element);
+        if(free_element == true)
+            list->element_free(&(node->element));
         free(node);
         return list;
     }
@@ -163,7 +165,8 @@ dplist_t *dpl_remove_at_index(dplist_t *list, int index, bool free_element) {
     //arived at the correct index -1
     //make node point to the next one
     node->prev->next = node->next;
-    list->element_free(node->element);
+    if(free_element == true)
+        list->element_free(&(node->element));
     free(node);
     return list;
     

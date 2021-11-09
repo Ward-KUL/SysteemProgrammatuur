@@ -175,7 +175,42 @@ START_TEST(test_insert){
 }
 END_TEST
 
-START_TEST(test_add_and_get){
+START_TEST(test_remove){
+    //null list
+    dplist_t* list = NULL;
+    dpl_remove_at_index(list,0,false);
+    ck_assert_msg(dpl_remove_at_index(list,0,false) == NULL,"F");
+    ck_assert_msg(dpl_remove_at_index(list,0,true) == NULL,"F");
+    ck_assert_msg(dpl_remove_at_index(list,-1,false) == NULL,"F");
+    ck_assert_msg(dpl_remove_at_index(list,-1,true) == NULL,"F");
+    ck_assert_msg(dpl_remove_at_index(list,99,false) == NULL,"F");
+    ck_assert_msg(dpl_remove_at_index(list,99,true) == NULL,"F");
+    //empty list
+    list = dpl_create(element_copy,element_free,element_compare);
+    ck_assert_msg(dpl_remove_at_index(list,0,false) == list,"F");
+    ck_assert_msg(dpl_remove_at_index(list,0,true) == list,"F");
+    ck_assert_msg(dpl_remove_at_index(list,-1,false) == list,"F");
+    ck_assert_msg(dpl_remove_at_index(list,-1,true) == list,"F");
+    ck_assert_msg(dpl_remove_at_index(list,99,false) == list,"F");
+    ck_assert_msg(dpl_remove_at_index(list,99,true) == list,"F");
+    dpl_free(&list,true);
+
+    //with elements
+    my_element_t* e1 = make_element(1,'a');
+    my_element_t* e2 = make_element(2,'b');
+    my_element_t* e3 = make_element(3,'c');
+    list = dpl_create(element_copy,element_free,element_compare);
+    dpl_insert_at_index(list,e1,0,false);
+    dpl_insert_at_index(list,e2,1,false);
+    dpl_insert_at_index(list,e3,2,false);
+    ck_assert_msg(dpl_get_element_at_index(list,1) == e2,"F");
+    dpl_remove_at_index(list,1,true);//remove e2
+    ck_assert_msg(dpl_get_element_at_index(list,1) == e3,"F");
+    dpl_remove_at_index(list,-3,false);//remove e1
+    ck_assert_msg(dpl_get_element_at_index(list,-4) == e3,"F");
+    dpl_free(&list,true);
+    element_free((void**)&e1);
+
 
    
     
@@ -197,7 +232,7 @@ int main(void) {
     suite_add_tcase(s1, tc1_1);
     tcase_add_checked_fixture(tc1_1, setup, teardown);
     tcase_add_test(tc1_1, test_ListFree);
-    tcase_add_test(tc1_1,test_add_and_get);
+    tcase_add_test(tc1_1,test_remove);
     tcase_add_test(tc1_1,test_insert);
     // Add other tests here...
 
