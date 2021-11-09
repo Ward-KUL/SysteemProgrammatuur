@@ -84,7 +84,7 @@ START_TEST(test_ListFree)
         element_free((void**) &element);
         list = dpl_create(element_copy,element_free,element_compare);
         element = make_element(2,'b');
-        dpl_insert_at_index(list,element,0,true);
+        dpl_insert_at_index(list,element,0,false);
         dpl_free(&list,true); 
         ck_assert_msg(list == NULL,"Failure: expected null");
 
@@ -115,6 +115,66 @@ START_TEST(test_ListFree)
     }
 END_TEST
 
+START_TEST(test_insert){
+   dplist_t* list = NULL;
+   my_element_t* e = make_element(1,'a');
+   ck_assert_msg(dpl_insert_at_index(list,e,0,false)==NULL,"ex null");
+   ck_assert_msg(dpl_insert_at_index(list,e,-1,false)==NULL,"ex null");
+   ck_assert_msg(dpl_insert_at_index(list,e,99,false)==NULL,"ex null");
+   ck_assert_msg(dpl_insert_at_index(list,e,0,true)==NULL,"ex null");
+   ck_assert_msg(dpl_insert_at_index(list,e,-1,true)==NULL,"ex null");
+   ck_assert_msg(dpl_insert_at_index(list,e,99,true)==NULL,"ex null");
+   element_free((void**)&e);
+   ck_assert_msg(dpl_insert_at_index(list,NULL,0,true) == NULL,"ex null");
+   dpl_free(&list,false);
+
+    list = dpl_create(element_copy,element_free,element_compare);
+    my_element_t* e1 = make_element(1,'a');
+    dpl_insert_at_index(list,e1,0,false);
+    ck_assert_msg(dpl_get_element_at_index(list,0)== e1,"failure");
+    my_element_t* e2 = make_element(2,'b');
+    dpl_insert_at_index(list,e2,-1,false);
+    ck_assert_msg(dpl_get_element_at_index(list,-1)== e2,"failure");
+    my_element_t* e3 = make_element(3,'c');
+    dpl_insert_at_index(list,e3,0,false);
+    ck_assert_msg(dpl_get_element_at_index(list,0) == e3,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,1) == e2,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,99) == e1,"F");
+    my_element_t* e4 = make_element(4,'d');
+    dpl_insert_at_index(list,e4,99,false);
+    dpl_insert_at_index(list,NULL,4,false);
+    ck_assert_msg(dpl_get_element_at_index(list,3) == e4,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,4) == NULL,"F");
+    dpl_free(&list,true);
+
+    //add to list with copies
+    list = dpl_create(element_copy,element_free,element_compare);
+    my_element_t* e6 = make_element(6,'f');
+    dpl_insert_at_index(list,e6,0,true);
+    ck_assert_msg(*((my_element_t*)dpl_get_element_at_index(list,0))->name == *(e6->name),"F");
+    dpl_free(&list,true);
+    ck_assert_msg(*e6->name = 'f',"F");
+    element_free((void**)&e6);
+
+    //geting from null list
+    list = NULL;
+    ck_assert_msg(dpl_get_element_at_index(list,-1) == NULL,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,1) == NULL,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,0) == NULL,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,99) == NULL,"F");
+
+    //getting from empty list
+    list = dpl_create(element_copy,element_free,element_compare);
+    ck_assert_msg(dpl_get_element_at_index(list,-1) == NULL,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,1) == NULL,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,0) == NULL,"F");
+    ck_assert_msg(dpl_get_element_at_index(list,99) == NULL,"F");
+    dpl_free(&list,true);
+
+
+}
+END_TEST
+
 START_TEST(test_add_and_get){
 
    
@@ -138,6 +198,7 @@ int main(void) {
     tcase_add_checked_fixture(tc1_1, setup, teardown);
     tcase_add_test(tc1_1, test_ListFree);
     tcase_add_test(tc1_1,test_add_and_get);
+    tcase_add_test(tc1_1,test_insert);
     // Add other tests here...
 
     srunner_run_all(sr, CK_VERBOSE);

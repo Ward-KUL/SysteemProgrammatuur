@@ -52,7 +52,7 @@ struct dplist {
     int (*element_compare)(void *x, void *y);
 };
 
-dplist_node_t* create_new_node(void* element,bool insert_copy);
+dplist_node_t* create_new_node(void* element);
 
 
 dplist_t *dpl_create(// callback functions
@@ -76,7 +76,7 @@ void dpl_free(dplist_t **list, bool free_element) {
         dplist_node_t* node = (*list)->head;
         dplist_node_t* previous = NULL;
         while(node != NULL){
-            if(free_element == true) (*list)->element_free(&(node->element));//call element free
+            if((free_element == true)&&(node->element!=NULL)) (*list)->element_free(&(node->element));//call element free
             previous = node;
             node = node->next;
             free(previous);
@@ -91,17 +91,23 @@ void dpl_free(dplist_t **list, bool free_element) {
 
 dplist_t *dpl_insert_at_index(dplist_t *list, void *element, int index, bool insert_copy) {
 
-    printf("nothing is done yet with bool insert_copy\n");
 
     if(list == NULL) return NULL;
+    
     if(list->head == NULL) {
         //the element given will aways be the firste element in the list
-        list->head = create_new_node(element,insert_copy);
+        if(insert_copy == true)
+            list->head = create_new_node(list->element_copy(element));
+        else
+            list->head = create_new_node(element);
     }
     else{
-            dplist_node_t* node = create_new_node(element,insert_copy);
+        dplist_node_t* node = NULL;
+            if(insert_copy == true)
+                node = create_new_node(list->element_copy(element));
+            else
+                node = create_new_node(element);
             if(index<= 0){
-                node = create_new_node(element,insert_copy);
                 node->next = list->head;
                 list->head->prev = node;
                 list->head = node;
@@ -126,7 +132,7 @@ dplist_t *dpl_insert_at_index(dplist_t *list, void *element, int index, bool ins
 
 }
 
-dplist_node_t* create_new_node(void* element,bool insert_copy){
+dplist_node_t* create_new_node(void* element){
     //printf("%d: created an element of size %ld\ns",__LINE__,sizeof(dplist_node_t));
     dplist_node_t* newNode = malloc(sizeof(dplist_node_t));
     newNode->element = element;
@@ -179,7 +185,7 @@ int dpl_size(dplist_t *list) {
 
 void *dpl_get_element_at_index(dplist_t *list, int index) {
 
-    if(list == NULL) return NULL;
+    if((list == NULL )|| (list->head == NULL)) return NULL;
     if(index<=0) return list->head->element;
     int size = dpl_size(list);
     if(index >= size - 1){
