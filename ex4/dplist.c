@@ -209,16 +209,17 @@ void *dpl_get_element_at_index(dplist_t *list, int index) {
 
 int dpl_get_index_of_element(dplist_t *list, void *element) {
 
-    if(list == NULL) return -1;
+    if(list == NULL || element==NULL) return -1;
+    if(list->head == NULL) return -1; //list is empty
     dplist_node_t* node = list->head;
     //dplist_node_t* previousNode;
     int index = 0;
-    while((node->element) != (element)){
-        if(node == NULL) return -1; //element not found
+    while(node != NULL){
+        if(node->element == element) return index; 
         node = node->next;
         index++;
     }
-    return index;
+    return -1;//element not found
 }
 
 dplist_node_t *dpl_get_reference_at_index(dplist_t *list, int index) {

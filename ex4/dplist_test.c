@@ -55,6 +55,23 @@ my_element_t* make_element(int id,char name_c){
     return element;
 }
 
+dplist_t* make_list_with_some_elements(){
+    my_element_t* e1 = make_element(1,'a');
+    my_element_t* e2 = make_element(2,'b');
+    my_element_t* e3 = make_element(3,'c');
+    my_element_t* e4 = make_element(4,'d');
+    my_element_t* e5 = make_element(5,'e');
+    my_element_t* e6 = make_element(6,'f');
+    dplist_t* list = dpl_create(element_copy,element_free,element_compare);
+    dpl_insert_at_index(list,e1,0,false);
+    dpl_insert_at_index(list,e2,1,false);
+    dpl_insert_at_index(list,e3,2,false);
+    dpl_insert_at_index(list,e4,3,false);
+    dpl_insert_at_index(list,e5,4,false);
+    dpl_insert_at_index(list,e6,5,false);
+    return list;
+}
+
 void setup(void) {
     // Implement pre-test setup
 }
@@ -279,6 +296,34 @@ START_TEST(test_getReference){
 }
 END_TEST
 
+START_TEST(test_getIndexOfElement){
+    dplist_t* list = NULL;
+    my_element_t* e = make_element(1,'a');
+    ck_assert_msg(dpl_get_index_of_element(list,NULL) == -1,"F");
+    ck_assert_msg(dpl_get_index_of_element(list,e) == -1,"F");
+    dpl_insert_at_index(list,e,0,false);
+    ck_assert_msg(dpl_get_index_of_element(list,e) == -1,"F");
+    element_free((void**)&e);
+    
+    list = make_list_with_some_elements();
+    my_element_t* e5 = make_element(1,'e');
+    ck_assert_msg(dpl_get_index_of_element(list,NULL) == -1,"F");
+    ck_assert_msg(dpl_get_index_of_element(list,e5) == -1,"F");
+    dpl_insert_at_index(list,e5,0,false);
+    ck_assert_msg(dpl_get_index_of_element(list,e5) == 0,"F");
+    dpl_free(&list,true);
+
+    list = dpl_create(element_copy,element_free,element_compare);
+    my_element_t* e7 = make_element(7,7);
+    ck_assert_msg(dpl_get_index_of_element(list,NULL) == -1,"F");
+    ck_assert_msg(dpl_get_index_of_element(list,e) == -1,"F");
+    dpl_insert_at_index(list,e7,0,false);
+    ck_assert_msg(dpl_get_index_of_element(list,e) == -1,"F");
+    dpl_free(&list,true);
+
+}
+END_TEST
+
 //START_TEST(test_nameOfYourTest)
 //  Add other testcases here...
 //END_TEST
@@ -297,6 +342,7 @@ int main(void) {
     tcase_add_test(tc1_1,test_size);
     //tcase_add_test(tc1_1,test_insertSameElement);
     tcase_add_test(tc1_1,test_getReference);
+    tcase_add_test(tc1_1,test_getIndexOfElement);
 
 
     
