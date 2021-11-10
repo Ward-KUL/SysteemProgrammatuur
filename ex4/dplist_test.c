@@ -11,6 +11,10 @@
 #include <assert.h>
 
 
+struct dplist_node {
+    dplist_node_t *prev, *next;
+    void *element;
+};
 
 typedef struct {
     int id;
@@ -234,6 +238,47 @@ START_TEST(test_size){
 }
 END_TEST
 
+START_TEST(test_insertSameElement){
+    dplist_t* list = dpl_create(element_copy,element_free,element_compare);
+    my_element_t* e1 = make_element(1,'a');
+    dpl_insert_at_index(list,e1,0,false);
+    dpl_insert_at_index(list,e1,0,false);
+    ck_assert_msg(dpl_size(list) == 2,"F");
+    dpl_free(&list,true);
+
+}
+END_TEST
+
+START_TEST(test_getReference){
+    dplist_t* list = dpl_create(element_copy,element_free,element_compare);
+    my_element_t* e1 = make_element(1,'a');
+    dpl_insert_at_index(list,e1,0,false);
+    dplist_node_t* ref = dpl_get_reference_at_index(list,0);
+    my_element_t* e2 = (my_element_t*)(((dplist_node_t*)ref)->element);
+    ck_assert_msg(ref->element == e1,"F");
+    my_element_t* e3 = make_element(2,'b');
+    dpl_insert_at_index(list,e3,1,false);
+    ck_assert_msg(dpl_get_reference_at_index(list,0)->element ==  e1,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,1)->element ==  e3,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,-1)->element ==  e1,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,99)->element ==  e3,"F");
+    dpl_free(&list,true);
+    //empty and null list
+    list = NULL;
+    ck_assert_msg(dpl_get_reference_at_index(list,0) ==  NULL,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,1) ==  NULL,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,-1) ==  NULL,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,99) ==  NULL,"F");
+    list = dpl_create(element_copy,element_free,element_compare);
+    ck_assert_msg(dpl_get_reference_at_index(list,0) ==  NULL,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,1) ==  NULL,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,-1) ==  NULL,"F");
+    ck_assert_msg(dpl_get_reference_at_index(list,99) ==  NULL,"F");
+    dpl_free(&list,true);
+
+}
+END_TEST
+
 //START_TEST(test_nameOfYourTest)
 //  Add other testcases here...
 //END_TEST
@@ -250,6 +295,10 @@ int main(void) {
     tcase_add_test(tc1_1,test_remove);
     tcase_add_test(tc1_1,test_insert);
     tcase_add_test(tc1_1,test_size);
+    //tcase_add_test(tc1_1,test_insertSameElement);
+    tcase_add_test(tc1_1,test_getReference);
+
+
     
     // Add other tests here...
 

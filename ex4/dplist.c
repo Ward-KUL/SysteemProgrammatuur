@@ -76,7 +76,10 @@ void dpl_free(dplist_t **list, bool free_element) {
         dplist_node_t* node = (*list)->head;
         dplist_node_t* previous = NULL;
         while(node != NULL){
-            if((free_element == true)&&(node->element!=NULL)) (*list)->element_free(&(node->element));//call element free
+            if((free_element == true)&&(node->element!=NULL)){
+                (*list)->element_free(&(node->element));//call element free
+                //(*(&node))->element = NULL; //and set pointer to null so we don't want to clear the same element twice
+            } 
             previous = node;
             node = node->next;
             free(previous);
@@ -220,6 +223,7 @@ int dpl_get_index_of_element(dplist_t *list, void *element) {
 
 dplist_node_t *dpl_get_reference_at_index(dplist_t *list, int index) {
 
+    if(list == NULL) return NULL;
     int count;
     dplist_node_t *dummy;
     if (list->head == NULL) return NULL;
