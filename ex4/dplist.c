@@ -70,6 +70,7 @@ dplist_t *dpl_create(// callback functions
     return list;
 }
 
+
 void dpl_free(dplist_t **list, bool free_element) {
 
     if(*list != NULL){
@@ -232,6 +233,7 @@ dplist_node_t *dpl_get_reference_at_index(dplist_t *list, int index) {
         if (count >= index) return dummy;
     }//TODO: add your code here
     return dummy;
+}
 
 void *dpl_get_element_at_reference(dplist_t *list, dplist_node_t *reference) {
 
@@ -243,6 +245,27 @@ void *dpl_get_element_at_reference(dplist_t *list, dplist_node_t *reference) {
     return NULL;
 
 }
+dplist_node_t *dpl_get_first_reference(dplist_t *list){
+    if(list == NULL) return NULL;
+    if(list->head == NULL) return NULL;
+    return list->head;
 }
+
+dplist_node_t *dpl_get_last_reference(dplist_t *list){
+    if(list == NULL) return NULL;
+    if(list->head == NULL) return NULL;
+    //first find last node
+    dplist_node_t* node = list->head;
+    if(list->head->next == NULL) return list->head;
+    while(node->next != NULL){
+        node = node->next;
+    }
+    return node;
+}
+
+
+
+
+
 
 

@@ -324,6 +324,42 @@ START_TEST(test_getIndexOfElement){
 }
 END_TEST
 
+START_TEST(test_get_first_reference){
+    dplist_t* list = NULL;
+    ck_assert(dpl_get_first_reference(list) == NULL);
+    list = dpl_create(element_copy,element_free,element_compare);
+    ck_assert_msg(dpl_get_first_reference(list) == NULL,"F");
+    my_element_t* e = make_element(1,'a');
+    dpl_insert_at_index(list,e,-1, false);
+    ck_assert_msg((dpl_get_first_reference(list))->element == e,"F");
+    dpl_free(&list,true);
+    list = make_list_with_some_elements();
+    my_element_t* e2 = make_element(1,'a');
+    dpl_insert_at_index(list,e2,-1, false);
+    ck_assert_msg(dpl_get_first_reference(list)->element == e2,"F");
+    dpl_free(&list,true);
+    
+}
+END_TEST
+
+START_TEST(test_get_last_reference){
+    dplist_t* list = NULL;
+    ck_assert(dpl_get_last_reference(list) == NULL);
+    list = dpl_create(element_copy,element_free,element_compare);
+    ck_assert_msg(dpl_get_last_reference(list) == NULL,"F");
+    my_element_t* e = make_element(1,'a');
+    dpl_insert_at_index(list,e,-1, false);
+    ck_assert_msg((dpl_get_last_reference(list))->element == e,"F");
+    dpl_free(&list,true);
+    list = make_list_with_some_elements();
+    my_element_t* e2 = make_element(1,'a');
+    dpl_insert_at_index(list,e2,99, false);
+    ck_assert_msg(dpl_get_last_reference(list)->element == e2,"F");
+    dpl_free(&list,true);
+    
+}
+END_TEST
+
 //START_TEST(test_nameOfYourTest)
 //  Add other testcases here...
 //END_TEST
@@ -343,6 +379,10 @@ int main(void) {
     //tcase_add_test(tc1_1,test_insertSameElement);
     tcase_add_test(tc1_1,test_getReference);
     tcase_add_test(tc1_1,test_getIndexOfElement);
+    tcase_add_test(tc1_1,test_get_first_reference);
+    tcase_add_test(tc1_1,test_get_last_reference);
+
+
 
 
     
