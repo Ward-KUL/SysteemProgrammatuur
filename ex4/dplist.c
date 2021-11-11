@@ -289,6 +289,31 @@ dplist_node_t *dpl_get_previous_reference(dplist_t *list, dplist_node_t *referen
     return NULL;
 }
 
+dplist_node_t *dpl_get_reference_of_element(dplist_t *list, void *element){
+    if(list == NULL||element==NULL) return NULL;
+    if(list->head == NULL) return NULL;
+    dplist_node_t* node = list->head;
+    while(node!=NULL){
+        if(node->element == element) return node;
+        node = node->next;
+    }
+    //element not found
+    return NULL;
+}
+
+int dpl_get_index_of_reference(dplist_t *list, dplist_node_t *reference){
+    if(list==NULL||reference ==NULL) return -1;
+    dplist_node_t* node = list->head;
+    int counter = 0;
+    while(node!=NULL){
+        if(node == reference) return counter;
+        node = node->next;
+        counter ++; 
+    }
+    //refernce not present
+    return -1;
+}
+
 
 
 
