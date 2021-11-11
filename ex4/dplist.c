@@ -145,6 +145,7 @@ dplist_t *dpl_insert_at_index(dplist_t *list, void *element, int index, bool ins
             return list;
 
     }
+    return list;
 
 }
 
@@ -402,6 +403,7 @@ dplist_t *dpl_remove_element(dplist_t *list, void *element, bool free_element){
     dplist_node_t* ref = dpl_get_reference_of_element(list,element);
     if(ref == NULL) return list; //the element was not present in the list
     dpl_remove_at_reference(list,ref,free_element);
+    return list;
 }
 
 dplist_t *dpl_insert_sorted(dplist_t *list, void *element, bool insert_copy){

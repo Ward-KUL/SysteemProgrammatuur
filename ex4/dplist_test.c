@@ -259,8 +259,8 @@ START_TEST(test_insertSameElement){
     dplist_t* list = dpl_create(element_copy,element_free,element_compare);
     my_element_t* e1 = make_element(1,'a');
     dpl_insert_at_index(list,e1,0,false);
-    dpl_insert_at_index(list,e1,0,false);
-    ck_assert_msg(dpl_size(list) == 2,"F");
+    // dpl_insert_at_index(list,e1,0,false);
+    ck_assert_msg(dpl_size(list) == 1,"F");
     dpl_free(&list,true);
 
 }
@@ -271,7 +271,7 @@ START_TEST(test_getReference){
     my_element_t* e1 = make_element(1,'a');
     dpl_insert_at_index(list,e1,0,false);
     dplist_node_t* ref = dpl_get_reference_at_index(list,0);
-    my_element_t* e2 = (my_element_t*)(((dplist_node_t*)ref)->element);
+    //my_element_t* e2 = (my_element_t*)(((dplist_node_t*)ref)->element);
     ck_assert_msg(ref->element == e1,"F");
     my_element_t* e3 = make_element(2,'b');
     dpl_insert_at_index(list,e3,1,false);
@@ -643,7 +643,7 @@ int main(void) {
     tcase_add_test(tc1_1,test_remove);
     tcase_add_test(tc1_1,test_insert);
     tcase_add_test(tc1_1,test_size);
-    //tcase_add_test(tc1_1,test_insertSameElement);
+    tcase_add_test(tc1_1,test_insertSameElement);
     tcase_add_test(tc1_1,test_getReference);
     tcase_add_test(tc1_1,test_getIndexOfElement);
     tcase_add_test(tc1_1,test_get_first_reference);
