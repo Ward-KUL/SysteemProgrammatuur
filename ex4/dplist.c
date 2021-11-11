@@ -100,14 +100,14 @@ dplist_t *dpl_insert_at_index(dplist_t *list, void *element, int index, bool ins
     
     if(list->head == NULL) {
         //the element given will aways be the firste element in the list
-        if(insert_copy == true)
+        if(insert_copy == true && element!=NULL)
             list->head = create_new_node(list->element_copy(element));
         else
             list->head = create_new_node(element);
     }
     else{
         dplist_node_t* node = NULL;
-            if(insert_copy == true)
+            if(insert_copy == true && element!=NULL)
                 node = create_new_node(list->element_copy(element));
             else
                 node = create_new_node(element);
@@ -312,6 +312,32 @@ int dpl_get_index_of_reference(dplist_t *list, dplist_node_t *reference){
     }
     //refernce not present
     return -1;
+}
+
+dplist_t *dpl_insert_at_reference(dplist_t *list, void *element, dplist_node_t *reference, bool insert_copy){
+    if(list == NULL||reference == NULL) return NULL;
+    dplist_node_t* node = list->head;
+    while(node != NULL){
+        if(node == reference){
+            if(node->element != NULL)
+                list->element_free(&(node->element));
+            if(insert_copy == true && element!=NULL){
+                node->element = list->element_copy(element);
+                return list;
+            }
+            else   {
+                node->element = element;
+                return list;
+            }
+            
+        } 
+        node = node->next;
+    }
+    return NULL;
+}
+
+dplist_t *dpl_remove_at_reference(dplist_t *list, dplist_node_t *reference, bool free_element){
+    dpl_remove_at_index(list,dpl_get_index_of_reference(list,reference),free_element);
 }
 
 

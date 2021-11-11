@@ -472,6 +472,75 @@ START_TEST(test_get_index_of_reference){
 }
 END_TEST
 
+START_TEST(test_insert_at_refernce){
+    dplist_t* list = NULL;
+    ck_assert(dpl_insert_at_reference(list,NULL,NULL,true)==NULL);
+    ck_assert(dpl_insert_at_reference(list,NULL,NULL,false)==NULL);
+    dplist_t* list2 = dpl_create(element_copy,element_free,element_compare);
+    dplist_t* list3 = make_list_with_some_elements();
+    ck_assert(dpl_insert_at_reference(list2,NULL,NULL,true)==NULL);
+    my_element_t* e1 = make_element(1,'c');
+    ck_assert(dpl_insert_at_reference(list2,e1,NULL,true) == NULL);
+    ck_assert(dpl_insert_at_reference(list2,NULL,NULL,false)==NULL);
+    ck_assert(dpl_insert_at_reference(list2,e1,NULL,false) == NULL);
+    element_free((void**)&e1);
+    my_element_t* e = make_element(99,'p');
+    dpl_insert_at_reference(list3,e,dpl_get_first_reference(list3),false);
+    ck_assert(dpl_get_element_at_index(list3,0) == e);
+    dpl_remove_at_index(list3,0,true);
+    dpl_free(&list3,true);
+    dpl_free(&list2,true);
+
+    //testing with null elements
+    list = make_list_with_some_elements();
+    e = NULL;
+    dpl_insert_at_index(list,e,99,false);
+    ck_assert(dpl_get_element_at_index(list,99) == NULL);
+    ck_assert(dpl_get_element_at_index(list,3) != NULL);
+    ck_assert(dpl_get_reference_at_index(list,99) != NULL);
+    dplist_node_t* ref = dpl_get_reference_at_index(list,99);
+    e1 = make_element(1,'b');
+    dpl_insert_at_reference(list,e1,ref,false);
+    ck_assert(dpl_get_element_at_reference(list,ref) == e1);
+    dpl_free(&list,true);
+
+    list = make_list_with_some_elements();
+    e = NULL;
+    dpl_insert_at_index(list,e,99,true);
+    ck_assert(dpl_get_element_at_index(list,99) == NULL);
+    ref = dpl_get_reference_at_index(list,99);
+    e1 = make_element(1,'b');
+    dpl_insert_at_reference(list,e1,ref,true);
+    ck_assert(((my_element_t*)dpl_get_element_at_reference(list,ref))->id == e1->id);
+    dpl_free(&list,true);
+    element_free((void**)&e1);  
+
+    list = make_list_with_some_elements();
+    ck_assert(dpl_get_element_at_index(list,0) != NULL);
+    ck_assert(dpl_get_element_at_index(list,99)!=NULL);
+    e = NULL;
+    dpl_insert_at_reference(list,NULL,dpl_get_first_reference(list),false);
+    ck_assert(dpl_get_element_at_index(list,0) == NULL);
+    dpl_insert_at_reference(list,NULL,dpl_get_last_reference(list),true);
+    ck_assert(dpl_get_element_at_index(list,99)==NULL);
+    dpl_free(&list,true);
+
+    //reference not present in list
+    list = make_list_with_some_elements();
+    dplist_node_t* r = dpl_get_reference_at_index(list,0);
+    dpl_remove_at_reference(list,r,true);
+    ck_assert(dpl_get_index_of_reference(list,r) == -1);
+    ck_assert(dpl_insert_at_reference(list,NULL,r,true) == NULL);
+    ck_assert(dpl_insert_at_reference(list,NULL,r,false) == NULL);
+    my_element_t* element = make_element(1,'d');
+    ck_assert(dpl_insert_at_reference(list,element,r,true) == NULL);
+    ck_assert(dpl_insert_at_reference(list,element,r,false) == NULL);
+    dpl_free(&list,true);
+    element_free((void**)&element);
+
+}
+END_TEST
+
 int main(void) {
     Suite *s1 = suite_create("LIST_EX3");
     TCase *tc1_1 = tcase_create("Core");
@@ -494,14 +563,8 @@ int main(void) {
     tcase_add_test(tc1_1,test_get_element_at_reference);
     tcase_add_test(tc1_1,test_get_reference_of_element);
     tcase_add_test(tc1_1,test_get_index_of_reference);
+    tcase_add_test(tc1_1,test_insert_at_refernce);
 
-
-
-
-
-
-    
-    // Add other tests here...
 
     srunner_run_all(sr, CK_VERBOSE);
 
