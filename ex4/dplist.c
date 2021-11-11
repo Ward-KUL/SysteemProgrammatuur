@@ -363,8 +363,9 @@ dplist_t *dpl_insert_at_reference(dplist_t *list, void *element, dplist_node_t *
     // return NULL;
     
     //NEW CODE
+    if(list ==NULL || reference == NULL) return NULL;
     reference = dpl_get_reference_in_list_if_exists(list,reference);
-    if(reference == NULL) return NULL;
+    if(reference == NULL) return list;
     if(reference->element != NULL)
                 list->element_free(&(reference->element));
     if(insert_copy == true && element!=NULL){

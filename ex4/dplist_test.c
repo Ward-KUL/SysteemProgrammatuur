@@ -530,11 +530,11 @@ START_TEST(test_insert_at_refernce){
     dplist_node_t* r = dpl_get_reference_at_index(list,0);
     dpl_remove_at_index(list,dpl_get_index_of_reference(list,r),true);
     ck_assert(dpl_get_index_of_reference(list,r) == -1);
-    ck_assert(dpl_insert_at_reference(list,NULL,r,true) == NULL);
-    ck_assert(dpl_insert_at_reference(list,NULL,r,false) == NULL);
+    ck_assert(dpl_insert_at_reference(list,NULL,r,true) == list);
+    ck_assert(dpl_insert_at_reference(list,NULL,r,false) == list);
     my_element_t* element = make_element(1,'d');
-    ck_assert(dpl_insert_at_reference(list,element,r,true) == NULL);
-    ck_assert(dpl_insert_at_reference(list,element,r,false) == NULL);
+    ck_assert(dpl_insert_at_reference(list,element,r,true) == list);
+    ck_assert(dpl_insert_at_reference(list,element,r,false) == list);
     dpl_free(&list,true);
     element_free((void**)&element);
 
