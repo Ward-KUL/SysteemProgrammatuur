@@ -360,6 +360,70 @@ START_TEST(test_get_last_reference){
 }
 END_TEST
 
+START_TEST(test_get_next_reference){
+    dplist_t* list = NULL;
+    ck_assert(dpl_get_next_reference(list,NULL) == NULL);
+    list = make_list_with_some_elements();
+    dplist_node_t* ref = dpl_get_reference_at_index(list,3);
+    ck_assert(dpl_get_next_reference(list,ref) == dpl_get_reference_at_index(list,4));
+    ck_assert(dpl_get_next_reference(list,dpl_get_reference_at_index(list,0)) == dpl_get_reference_at_index(list,1));
+    ck_assert(dpl_get_next_reference(list,dpl_get_reference_at_index(list,99)) == NULL);
+    dpl_remove_at_index(list,3,true);
+    ck_assert(dpl_get_reference_at_index(list,2) != NULL);
+    ck_assert(dpl_get_next_reference(list,dpl_get_reference_at_index(list,2)) == dpl_get_reference_at_index(list,3));
+    dplist_t* list2 = dpl_create(element_copy,element_free,element_compare);
+    ck_assert(dpl_get_next_reference(list2,ref)==NULL);
+    dpl_insert_at_index(list2,make_element(1,'b'),0,false);
+    ck_assert(dpl_get_next_reference(list2,ref)==NULL);
+    ck_assert(dpl_get_next_reference(list,NULL) == NULL);
+    ck_assert(dpl_get_next_reference(list,dpl_get_reference_at_index(list,99)) == NULL);
+    dpl_free(&list,true);
+    dpl_free(&list2,true);
+}
+END_TEST
+
+START_TEST(test_get_previous_reference){
+    dplist_t* list = NULL;
+    ck_assert(dpl_get_previous_reference(list,NULL) == NULL);
+    list = make_list_with_some_elements();
+    dplist_node_t* ref = dpl_get_reference_at_index(list,3);
+    ck_assert(dpl_get_previous_reference(list,ref) == dpl_get_reference_at_index(list,2));
+    ck_assert(dpl_get_previous_reference(list,dpl_get_reference_at_index(list,99)) == dpl_get_reference_at_index(list,dpl_size(list)-2));
+    ck_assert(dpl_get_previous_reference(list,dpl_get_reference_at_index(list,0)) == NULL);
+    dpl_remove_at_index(list,3,true);
+    ck_assert(dpl_get_reference_at_index(list,4) != NULL);
+    ck_assert(dpl_get_previous_reference(list,dpl_get_reference_at_index(list,4)) == dpl_get_reference_at_index(list,3));
+    dplist_t* list2 = dpl_create(element_copy,element_free,element_compare);
+    ck_assert(dpl_get_previous_reference(list2,ref)==NULL);
+    dpl_insert_at_index(list2,make_element(1,'b'),0,false);
+    ck_assert(dpl_get_previous_reference(list2,ref)==NULL);
+    ck_assert(dpl_get_previous_reference(list,NULL) == NULL);
+    ck_assert(dpl_get_previous_reference(list,dpl_get_reference_at_index(list,0)) == NULL);
+    dpl_free(&list,true);
+    dpl_free(&list2,true);
+}
+END_TEST
+
+START_TEST(test_get_element_at_reference){
+    dplist_t* listE = NULL;
+    ck_assert(dpl_get_element_at_reference(listE,NULL) == NULL);
+    dplist_t* list = make_list_with_some_elements();
+    ck_assert(dpl_get_element_at_reference(list,NULL) == NULL);
+    ck_assert(dpl_get_element_at_reference(listE,dpl_get_reference_at_index(list,0)) == NULL);
+    ck_assert(dpl_get_element_at_reference(list,dpl_get_reference_at_index(list,3)) == dpl_get_element_at_index(list,3));
+    ck_assert(dpl_get_element_at_reference(list,dpl_get_reference_at_index(list,0)) == dpl_get_element_at_index(list,0));
+    ck_assert(dpl_get_element_at_reference(list,dpl_get_reference_at_index(list,99)) == dpl_get_element_at_index(list,99));
+    dplist_t* list2 = make_list_with_some_elements();
+    ck_assert(dpl_get_element_at_reference(list,dpl_get_reference_at_index(list2,0)) == NULL);
+
+    dpl_free(&list,true);
+    dpl_free(&list2,true);
+    dpl_free(&listE,true);
+
+
+}
+END_TEST
+
 //START_TEST(test_nameOfYourTest)
 //  Add other testcases here...
 //END_TEST
@@ -381,6 +445,11 @@ int main(void) {
     tcase_add_test(tc1_1,test_getIndexOfElement);
     tcase_add_test(tc1_1,test_get_first_reference);
     tcase_add_test(tc1_1,test_get_last_reference);
+    tcase_add_test(tc1_1,test_get_next_reference);
+    tcase_add_test(tc1_1,test_get_previous_reference);
+    tcase_add_test(tc1_1,test_get_element_at_reference);
+
+
 
 
 

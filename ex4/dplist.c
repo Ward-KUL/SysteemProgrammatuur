@@ -237,11 +237,13 @@ dplist_node_t *dpl_get_reference_at_index(dplist_t *list, int index) {
 
 void *dpl_get_element_at_reference(dplist_t *list, dplist_node_t *reference) {
 
-    if(list == NULL) return NULL;
+    if(list == NULL||reference == NULL) return NULL;
     dplist_node_t* node = list->head;
     while(node!=NULL){
         if(node == reference) return node->element;
+        node = node->next;
     }
+    //reference not found
     return NULL;
 
 }
@@ -261,6 +263,30 @@ dplist_node_t *dpl_get_last_reference(dplist_t *list){
         node = node->next;
     }
     return node;
+}
+
+dplist_node_t *dpl_get_next_reference(dplist_t *list, dplist_node_t *reference){
+    if(list == NULL|| reference ==NULL) return NULL;
+    if(list->head == NULL) return NULL;
+    dplist_node_t* node = list->head;
+    while(node!=NULL){
+        if(node == reference) return node->next;
+        node = node->next;
+    }
+    //refence not found
+    return NULL;
+}
+
+dplist_node_t *dpl_get_previous_reference(dplist_t *list, dplist_node_t *reference){
+    if(list == NULL|| reference ==NULL) return NULL;
+    if(list->head == NULL) return NULL;
+    dplist_node_t* node = list->head;
+    while(node!=NULL){
+        if(node == reference) return node->prev;
+        node = node->next;
+    }
+    //refence not found
+    return NULL;
 }
 
 
