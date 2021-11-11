@@ -54,6 +54,18 @@ struct dplist {
 
 dplist_node_t* create_new_node(void* element);
 
+dplist_node_t* dpl_get_reference_in_list_if_exists(dplist_t* list, dplist_node_t* ref){
+    if(list == NULL||ref == NULL) return NULL;
+    dplist_node_t* node = list->head;
+    while(node!=NULL){
+        if(node == ref){
+            return node;
+        }
+        node = node->next;
+    }
+    return NULL;
+}
+
 
 dplist_t *dpl_create(// callback functions
         void *(*element_copy)(void *src_element),
@@ -236,15 +248,20 @@ dplist_node_t *dpl_get_reference_at_index(dplist_t *list, int index) {
 }
 
 void *dpl_get_element_at_reference(dplist_t *list, dplist_node_t *reference) {
+    //OLD CODE
+    // if(list == NULL||reference == NULL) return NULL;
+    // dplist_node_t* node = list->head;
+    // while(node!=NULL){
+    //     if(node == reference) return node->element;
+    //     node = node->next;
+    // }
+    // //reference not found
+    // return NULL;
 
-    if(list == NULL||reference == NULL) return NULL;
-    dplist_node_t* node = list->head;
-    while(node!=NULL){
-        if(node == reference) return node->element;
-        node = node->next;
-    }
-    //reference not found
-    return NULL;
+    //NEW CODE
+    reference = dpl_get_reference_in_list_if_exists(list,reference);
+    if(reference == NULL) return NULL;
+    else return reference->element;
 
 }
 dplist_node_t *dpl_get_first_reference(dplist_t *list){
@@ -266,27 +283,36 @@ dplist_node_t *dpl_get_last_reference(dplist_t *list){
 }
 
 dplist_node_t *dpl_get_next_reference(dplist_t *list, dplist_node_t *reference){
-    if(list == NULL|| reference ==NULL) return NULL;
-    if(list->head == NULL) return NULL;
-    dplist_node_t* node = list->head;
-    while(node!=NULL){
-        if(node == reference) return node->next;
-        node = node->next;
-    }
-    //refence not found
-    return NULL;
+    //OLD CODE
+    // if(list == NULL|| reference ==NULL) return NULL;
+    // if(list->head == NULL) return NULL;
+    // dplist_node_t* node = list->head;
+    // while(node!=NULL){
+    //     if(node == reference) return node->next;
+    //     node = node->next;
+    // }
+    // //refence not found
+    // return NULL;
+
+    //NEW CODE
+    reference = dpl_get_reference_in_list_if_exists(list,reference);
+    if(reference!=NULL) return reference->next;
+    else return reference;
 }
 
 dplist_node_t *dpl_get_previous_reference(dplist_t *list, dplist_node_t *reference){
-    if(list == NULL|| reference ==NULL) return NULL;
-    if(list->head == NULL) return NULL;
-    dplist_node_t* node = list->head;
-    while(node!=NULL){
-        if(node == reference) return node->prev;
-        node = node->next;
-    }
-    //refence not found
-    return NULL;
+    // if(list == NULL|| reference ==NULL) return NULL;
+    // if(list->head == NULL) return NULL;
+    // dplist_node_t* node = list->head;
+    // while(node!=NULL){
+    //     if(node == reference) return node->prev;
+    //     node = node->next;
+    // }
+    // //refence not found
+    // return NULL;
+    reference = dpl_get_reference_in_list_if_exists(list,reference);
+    if(reference!=NULL) return reference->prev;
+    else return reference;
 }
 
 dplist_node_t *dpl_get_reference_of_element(dplist_t *list, void *element){
@@ -315,30 +341,123 @@ int dpl_get_index_of_reference(dplist_t *list, dplist_node_t *reference){
 }
 
 dplist_t *dpl_insert_at_reference(dplist_t *list, void *element, dplist_node_t *reference, bool insert_copy){
-    if(list == NULL||reference == NULL) return NULL;
-    dplist_node_t* node = list->head;
-    while(node != NULL){
-        if(node == reference){
-            if(node->element != NULL)
-                list->element_free(&(node->element));
-            if(insert_copy == true && element!=NULL){
-                node->element = list->element_copy(element);
-                return list;
-            }
-            else   {
-                node->element = element;
-                return list;
-            }
+    //OLD CODE
+    // if(list == NULL||reference == NULL) return NULL;
+    // dplist_node_t* node = list->head;
+    // while(node != NULL){
+    //     if(node == reference){
+    //         if(node->element != NULL)
+    //             list->element_free(&(node->element));
+    //         if(insert_copy == true && element!=NULL){
+    //             node->element = list->element_copy(element);
+    //             return list;
+    //         }
+    //         else   {
+    //             node->element = element;
+    //             return list;
+    //         }
             
-        } 
-        node = node->next;
+    //     } 
+    //     node = node->next;
+    // }
+    // return NULL;
+    
+    //NEW CODE
+    reference = dpl_get_reference_in_list_if_exists(list,reference);
+    if(reference == NULL) return NULL;
+    if(reference->element != NULL)
+                list->element_free(&(reference->element));
+    if(insert_copy == true && element!=NULL){
+        reference->element = list->element_copy(element);
+            return list;
+        }
+    else   {
+        reference->element = element;
+        return list;
     }
-    return NULL;
 }
 
 dplist_t *dpl_remove_at_reference(dplist_t *list, dplist_node_t *reference, bool free_element){
-    dpl_remove_at_index(list,dpl_get_index_of_reference(list,reference),free_element);
+    if(list == NULL||reference ==NULL||list->head == NULL) return NULL;
+    reference = dpl_get_reference_in_list_if_exists(list,reference);
+    if(reference == NULL) return NULL;
+    if(list->head == reference){//reference is the head of the list
+        list->head = reference->next;
+    }
+    else{
+        if(reference->next != NULL) reference->next->prev = reference->prev;
+        if(reference->prev != NULL) reference->prev->next = reference->next;
+    }
+    if(reference->element != NULL && free_element){
+        list->element_free(&(reference->element));
+    }
+    free(reference);
+    return list;
 }
+
+dplist_t *dpl_remove_element(dplist_t *list, void *element, bool free_element){
+    if(list == NULL) return NULL;
+    if(list->head == NULL) return NULL;
+    dplist_node_t* ref = dpl_get_reference_of_element(list,element);
+    if(ref == NULL) return list; //the element was not present in the list
+    dpl_remove_at_reference(list,ref,free_element);
+}
+
+dplist_t *dpl_insert_sorted(dplist_t *list, void *element, bool insert_copy){
+
+    //first find the index than insert at index
+    if(list == NULL||element == NULL) return NULL;
+    dplist_node_t* node = list->head;
+    int counter = 0;
+    while(node!=NULL && (list->element_compare(node->element,element)<0)){
+        node = node->next;
+        counter ++;
+    }
+    dpl_insert_at_index(list,element,counter,insert_copy);
+    return list;
+
+
+    // if(list == NULL||element == NULL) return NULL;
+    // if(element != NULL && insert_copy==true) element = list->element_copy(element);
+    // dplist_node_t* new = create_new_node(element);
+    // if(list->head == NULL){
+    //     //element is to be the first element in the list
+    //     list->head = new;
+    //     return list;
+    // }
+    // else{
+    //     if((list->element_compare(element,(list->head)->element)) < 0 ){
+    //         //element is smaller than the head
+    //         new->next = list->head;
+    //         list->head = new;
+    //         return list;
+    //     }
+    //     else{
+    //         dplist_node_t* node = list->head;
+    //         dplist_node_t* lastNode = NULL;
+    //         while(node != NULL){
+    //             if((list->element_compare(element,node->element)) >=0 ){
+    //                 //we have gotten a bigger element so we need to slide it behind this one
+    //                 new->prev = node;
+    //                 new->next = node->next;
+    //                 if(node->next != NULL){ //check wether the element to be added is the last element
+    //                     node->next = new;
+    //                     new->next->prev = new;
+    //                 }             
+    //                 return list;
+    //             }
+    //             lastNode = node;
+    //             node = node->next;
+    //         }
+    //         //the node needs to be added at the end
+    //         new->prev = lastNode;
+    //         lastNode->next = new;
+    //         return list;
+    //     }
+    // }
+}
+
+
 
 
 

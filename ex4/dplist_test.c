@@ -48,7 +48,7 @@ int element_compare(void * x, void * y) {
 
 my_element_t* make_element(int id,char name_c){
     my_element_t* element = malloc(sizeof(my_element_t));
-    element->id = 1;
+    element->id = id;
     char* name = malloc(sizeof(char));
     *name = name_c; 
     element->name = name;
@@ -528,7 +528,7 @@ START_TEST(test_insert_at_refernce){
     //reference not present in list
     list = make_list_with_some_elements();
     dplist_node_t* r = dpl_get_reference_at_index(list,0);
-    dpl_remove_at_reference(list,r,true);
+    dpl_remove_at_index(list,dpl_get_index_of_reference(list,r),true);
     ck_assert(dpl_get_index_of_reference(list,r) == -1);
     ck_assert(dpl_insert_at_reference(list,NULL,r,true) == NULL);
     ck_assert(dpl_insert_at_reference(list,NULL,r,false) == NULL);
@@ -538,6 +538,96 @@ START_TEST(test_insert_at_refernce){
     dpl_free(&list,true);
     element_free((void**)&element);
 
+}
+END_TEST
+
+START_TEST(test_remove_at_reference){
+    dplist_t* list = make_list_with_some_elements();
+    ck_assert(dpl_remove_at_reference(list,NULL,false) == NULL);
+    dplist_node_t* ref = dpl_get_reference_at_index(list,0);
+    dpl_remove_at_index(list,0,true);
+    ck_assert(dpl_remove_at_reference(list,ref,true) == NULL);
+    ref = dpl_get_reference_at_index(list,0);
+    ck_assert(dpl_get_first_reference(list) == ref);
+    dpl_remove_at_reference(list,ref,true);
+    ck_assert(dpl_get_first_reference(list) != ref);
+//reference is last element
+    ref = dpl_get_last_reference(list);
+    ck_assert(dpl_get_last_reference(list) == ref);
+    dpl_remove_at_reference(list,ref,true);
+    ck_assert(dpl_get_last_reference(list) != ref);
+
+    dpl_free(&list,true);
+
+    list = NULL;
+    ck_assert(dpl_remove_at_reference(list,NULL,false) == NULL);
+    ck_assert(dpl_remove_at_reference(list,ref,true) == NULL);
+
+    list = dpl_create(element_copy,element_free,element_compare);
+    ck_assert(dpl_remove_at_reference(list,NULL,false) == NULL);
+    ck_assert(dpl_remove_at_reference(list,ref,true) == NULL);
+    dpl_free(&list,true);
+
+}
+END_TEST
+
+START_TEST(test_remove_element){
+    dplist_t* list = NULL;
+    ck_assert(dpl_remove_element(list,NULL,true) == NULL);
+    ck_assert(dpl_remove_element(list,NULL,false) == NULL);
+    list = make_list_with_some_elements();
+    my_element_t* e = dpl_get_element_at_index(list,0);
+    dpl_remove_element(list,e,false);
+    ck_assert(dpl_get_element_at_index(list,0) != e);
+    ck_assert(dpl_remove_element(list,e,false) == list);
+    element_free((void**)&e);
+    my_element_t* e1 = make_element(1,'a');
+    dpl_insert_at_index(list,e1,0,false);
+    dpl_remove_element(list,e1,true);
+    dpl_free(&list,true);
+    list = dpl_create(element_copy,element_free,element_compare);
+    my_element_t* e2 = make_element(2,'b');
+    ck_assert(dpl_remove_element(list,e2,true) == NULL);
+    ck_assert(dpl_remove_element(list,e2,false) == NULL);
+    dpl_free(&list,true);
+    element_free((void**)&e2);
+
+}
+END_TEST
+
+START_TEST(test_insert_sorted){
+
+    my_element_t* test1 = make_element(1,'b');
+    my_element_t* test2 = make_element(2,'c');
+    my_element_t* test3 = make_element(3,'a');
+    printf("Hallo swa doet ge nog iets? %d %d\n",test1->id,test2->id);
+    ck_assert_msg(element_compare(test1,test2) == -1,"Was %d",element_compare(test1,test2));
+    element_free((void**)&test1);
+        element_free((void**)&test2);
+    element_free((void**)&test3);
+
+
+
+
+
+    dplist_t* list = NULL;
+    ck_assert(dpl_insert_sorted(list,NULL,true)==NULL);
+        ck_assert(dpl_insert_sorted(list,NULL,false)==NULL);
+    my_element_t* e = make_element(1,'a');
+        
+
+    list = dpl_create(element_copy,element_free,element_compare);
+    dpl_insert_sorted(list,e,false);
+    ck_assert(dpl_get_element_at_index(list,0) == e);
+    my_element_t* e1 = make_element(5,'b');
+    my_element_t* e2 = make_element(2,'c');
+    dpl_insert_sorted(list,e1,false);
+    dpl_insert_sorted(list,e2,true);
+    ck_assert(dpl_get_element_at_index(list,2) == e1);
+    ck_assert(dpl_get_element_at_index(list,1) != e2); //element with same id but not the same reference because we copied it
+    ck_assert(((my_element_t*)dpl_get_element_at_index(list,1))->id == e2->id);
+    dpl_free(&list,true);
+    element_free((void**)&e2);
 }
 END_TEST
 
@@ -564,6 +654,10 @@ int main(void) {
     tcase_add_test(tc1_1,test_get_reference_of_element);
     tcase_add_test(tc1_1,test_get_index_of_reference);
     tcase_add_test(tc1_1,test_insert_at_refernce);
+    tcase_add_test(tc1_1,test_remove_at_reference);
+    tcase_add_test(tc1_1,test_remove_element);
+    tcase_add_test(tc1_1,test_insert_sorted);
+
 
 
     srunner_run_all(sr, CK_VERBOSE);
