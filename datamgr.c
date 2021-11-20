@@ -169,6 +169,16 @@ sensor_value_t datamgr_get_avg(sensor_id_t sensor_id){
     return sum;
 }
 
+time_t datamgr_get_last_modified(sensor_id_t sensor_id){
+    sensor_node_t* node = find_sensor_id(sensor_id);
+    ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamg");
+    return node->last_modified; 
+}
+
+int datamgr_get_total_sensors(){
+    return dpl_size(node_list);
+}
+
 sensor_node_t* find_sensor_id(sensor_id_t id){
     int index = 0;
     int size = dpl_size(node_list);
@@ -191,3 +201,4 @@ sensor_data_t* convert_packed(sensor_data_packed_t* p){
     d->value = p->value;
     return d;
 }
+
