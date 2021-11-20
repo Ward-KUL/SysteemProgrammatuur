@@ -49,9 +49,10 @@ START_TEST(test_read_file){
 END_TEST
 
 START_TEST(test_free_datamgr){
-    // files_t files = open_files();
-    // datamgr_free();
-    // datamgr_parse_sensor_files(files.map,files.data);
+    files_t files = open_files();
+    datamgr_free();
+    datamgr_parse_sensor_files(files.map,files.data);
+
 
 }
 END_TEST

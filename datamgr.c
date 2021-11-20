@@ -70,7 +70,7 @@ int int_compare(void* x, void* y){
 }
 
 void node_free(void** node){
-    free(((sensor_node_t*)*node)->average_data);
+    dpl_free(&(((sensor_node_t*)node)->average_data),true);
     free(*node);
     *node = NULL;
 
@@ -88,11 +88,12 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     data_list = dpl_create(element_copy,element_free,element_compare);
     node_list = dpl_create(NULL,node_free,node_compare);
 
-    char* line = NULL;
+    char* line = malloc(40);
     size_t len = 0;
     while(getline(&line,&len,fp_sensor_map) != -1){
         parse_line_to_sensor_node(line);
     }
+    free(line);
     fclose(fp_sensor_map);
 
     sensor_data_packed_t data_formatted;
@@ -132,7 +133,7 @@ void add_time_to_sensor(void){
 void add_new_measurement_to_average(sensor_node_t* node,sensor_data_t* data){
     if(dpl_size(node->average_data)>=RUN_AVG_LENGTH){
         //er moet er eerst ene weg voor we er een kunnen bijsteken
-        dpl_remove_at_index(node->average_data,0,false);
+        dpl_remove_at_index(node->average_data,0,true);
     }
     dpl_insert_at_index(node->average_data,&(data->value),99,true);
 }
@@ -148,7 +149,7 @@ void parse_line_to_sensor_node(char* line){
 }
 
 void datamgr_free(){
-    dpl_free(&data_list,true);
+    dpl_free(&node_list,true);
 }
 uint16_t datamgr_get_room_id(sensor_id_t sensor_id){
     sensor_node_t* node = find_sensor_id(sensor_id);
