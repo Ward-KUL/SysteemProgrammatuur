@@ -6,8 +6,8 @@
 #include "lib/dplist.h"
 
 
-dplist_t* data_list;
 dplist_t* node_list;
+
 
 void* element_copy(void * element);
 void element_free(void ** element);
@@ -20,7 +20,7 @@ int int_compare(void* x, void* y);
 void print_sensor(sensor_data_t* sensor);
 sensor_data_t* convert_packed(sensor_data_packed_t* p);
 void parse_line_to_sensor_node(char* line);
-void add_time_to_sensor(void);
+void add_time_to_sensor(dplist_t*);
 void add_new_measurement_to_average(sensor_node_t* node,sensor_data_t* data);
 sensor_node_t* find_sensor_id(sensor_id_t id);
 
@@ -70,7 +70,8 @@ int int_compare(void* x, void* y){
 }
 
 void node_free(void** node){
-    dpl_free(&(((sensor_node_t*)node)->average_data),true);
+    dplist_t* avg_data = ((sensor_node_t*)*node)->average_data;
+    dpl_free(&avg_data,true);
     free(*node);
     *node = NULL;
 
@@ -85,7 +86,7 @@ int node_compare(void * x, void * y) {
 void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
 
     //intialize the list
-    data_list = dpl_create(element_copy,element_free,element_compare);
+    dplist_t* data_list = dpl_create(element_copy,element_free,element_compare);
     node_list = dpl_create(NULL,node_free,node_compare);
 
     char* line = malloc(40);
@@ -106,26 +107,25 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     }
     fclose(fp_sensor_data);
     //printSensorElements(data_list);
-    add_time_to_sensor();
+    add_time_to_sensor(data_list);
     return;   
 
 }
 
-void add_time_to_sensor(void){
+void add_time_to_sensor(dplist_t* data_list){
     //loop through data list and remove one by one untill all data has been put inside the sensors
     char node_index = 0;
     int size  = dpl_size(node_list);
     while(node_index<size){
-        //printf("Big loop\n %d",node_index);
         sensor_node_t* node = dpl_get_element_at_index(node_list,node_index);
-        sensor_data_t* data;
+        sensor_data_t* data = dpl_get_element_at_index(data_list,0);
         while((dpl_get_first_reference(data_list) != NULL) && (((data = dpl_get_element_at_index(data_list,0))->id) == node->id_sensor)){
-            //printf("%d\n",node_index);
             add_new_measurement_to_average(node,data);
             if(node->last_modified>data->ts) node->last_modified = data->ts;
             dpl_remove_element(data_list,data,true);
         }
         node_index ++;
+                                            //printf("%f\n",*(sensor_value_t*)dpl_get_element_at_index(node->average_data,1));
     }
     dpl_free(&data_list,true);
 }
@@ -135,7 +135,11 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_data_t* data){
         //er moet er eerst ene weg voor we er een kunnen bijsteken
         dpl_remove_at_index(node->average_data,0,true);
     }
-    dpl_insert_at_index(node->average_data,&(data->value),99,true);
+    sensor_value_t* new_value = malloc(sizeof(sensor_value_t));
+    *new_value = data->value;
+    dpl_insert_at_index(node->average_data,new_value,99,false);
+    //printf("%f\n",*(sensor_value_t*)dpl_get_element_at_index(node->average_data,0));
+    //printf("%d\n",dpl_size(node->average_data));
 }
 
 
@@ -163,11 +167,13 @@ sensor_value_t datamgr_get_avg(sensor_id_t sensor_id){
     dplist_t* list = node->average_data;
     char index = 0;
     int size = dpl_size(list);
+    if(size<RUN_AVG_LENGTH) return 0;
     int sum = 0;
     while(index<size){
-        sum += *((int*)dpl_get_element_at_index(list,index));
+        sum += *((sensor_value_t*)dpl_get_element_at_index(list,index));
+        index ++;
     }
-    return sum;
+    return sum/size;
 }
 
 time_t datamgr_get_last_modified(sensor_id_t sensor_id){
@@ -184,8 +190,9 @@ sensor_node_t* find_sensor_id(sensor_id_t id){
     int index = 0;
     int size = dpl_size(node_list);
     while(index<size){
-        sensor_node_t* data = dpl_get_element_at_index(data_list,index);
+        sensor_node_t* data = dpl_get_element_at_index(node_list,index);
         if(data->id_sensor == id) return data;
+        index ++;
     }
     return NULL;
 }

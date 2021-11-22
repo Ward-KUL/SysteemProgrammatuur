@@ -44,6 +44,7 @@ END_TEST
 START_TEST(test_read_file){
     files_t files = open_files();
     datamgr_parse_sensor_files(files.map,files.data);
+    printf("%f\n",datamgr_get_avg(15));
     datamgr_free();
 }
 END_TEST
