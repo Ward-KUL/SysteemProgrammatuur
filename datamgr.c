@@ -92,6 +92,7 @@ int node_compare(void * x, void * y) {
 
 void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
 
+    if(node_list != NULL) datamgr_free();//als er nog sensors in de lijst zitten eerst de lijst freeen zodat we geen memory leaks hebben
     //intialize the list
     dplist_t* data_list = dpl_create(element_copy,element_free,element_compare);
     node_list = dpl_create(NULL,node_free,node_compare);
@@ -110,7 +111,8 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
         sensor_data_t* data = convert_packed(&data_formatted);
         //print_sensor(data);
-        dpl_insert_sorted(data_list,data,true);
+        if((SET_MAX_TEMP >= (data->value)&& ((data->value) <= SET_MIN_TEMP)))
+            dpl_insert_sorted(data_list,data,true);
         free(data);
 
     }
@@ -153,14 +155,17 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_data_t* data){
 
 void datamgr_free(){
     dpl_free(&node_list,true);
+    node_list = NULL;
 }
 uint16_t datamgr_get_room_id(sensor_id_t sensor_id){
+    if(node_list == NULL) return -1;
     sensor_node_t* node = find_sensor_id(sensor_id);
     ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamg");
     return node->id_room;
 }
 
 sensor_value_t datamgr_get_avg(sensor_id_t sensor_id){
+    if(node_list == NULL) return -1;
     sensor_node_t* node = find_sensor_id(sensor_id);
     ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamgr");
     dplist_t* list = node->average_data;
@@ -176,6 +181,7 @@ sensor_value_t datamgr_get_avg(sensor_id_t sensor_id){
 }
 
 time_t datamgr_get_last_modified(sensor_id_t sensor_id){
+    if(node_list == NULL) return -1;
     sensor_node_t* node = find_sensor_id(sensor_id);
     ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamg");
     return node->last_modified; 
