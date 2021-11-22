@@ -12,6 +12,7 @@ dplist_t* node_list;
 void* element_copy(void * element);
 void element_free(void ** element);
 int element_compare(void * x, void * y);
+// void* node_copy(void* element);
 void node_free(void** node);
 int node_compare(void * x, void * y);
 void int_free(void** element);
@@ -43,6 +44,12 @@ void * element_copy(void * element) {
     copy->value = ((sensor_data_t*)element)->value;
     return (void *) copy;
 }
+
+// void* node_copy(void* element){
+//     sensor_node_t* copy = malloc(sizeof(sensor_node_t));
+//     assert(copy!=NULL);
+//     copy->average_data = ((sensor_node_t*)element)->
+// }
 
 void element_free(void ** element) {
     //printf("This should be the element: %c\n",*(((my_element_t*)*element))->name);
@@ -88,15 +95,17 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     //intialize the list
     dplist_t* data_list = dpl_create(element_copy,element_free,element_compare);
     node_list = dpl_create(NULL,node_free,node_compare);
-
-    char* line = malloc(40);
-    size_t len = 0;
-    while(getline(&line,&len,fp_sensor_map) != -1){
-        parse_line_to_sensor_node(line);
+    //create the list with the sensors
+    sensor_node_t* node = malloc(sizeof(sensor_node_t));
+    while(fscanf(fp_sensor_map,"%hd %hd",&(node->id_room),&(node->id_sensor))>0){
+        average_data_t* average_data = dpl_create(int_copy,int_free,int_compare);
+        (node->average_data) = average_data;
+        dpl_insert_sorted(node_list,node,false);
+        node = malloc(sizeof(sensor_node_t));
     }
-    free(line);
+    free(node);
     fclose(fp_sensor_map);
-
+    //create the list with the data from the sensors
     sensor_data_packed_t data_formatted;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
         sensor_data_t* data = convert_packed(&data_formatted);
@@ -140,16 +149,6 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_data_t* data){
     dpl_insert_at_index(node->average_data,new_value,99,false);
     //printf("%f\n",*(sensor_value_t*)dpl_get_element_at_index(node->average_data,0));
     //printf("%d\n",dpl_size(node->average_data));
-}
-
-
-void parse_line_to_sensor_node(char* line){
-    sensor_node_t* node = malloc(sizeof(sensor_node_t));
-    sscanf(line,"%hd %hd",&(node->id_room),&(node->id_sensor));
-    average_data_t* average_data = dpl_create(int_copy,int_free,int_compare);
-    (node->average_data) = average_data;
-    dpl_insert_sorted(node_list,node,false);
-    return;
 }
 
 void datamgr_free(){
