@@ -21,5 +21,15 @@ typedef struct {
     sensor_ts_t ts;         /** < sensor timestamp */
 } sensor_data_t;
 
+/**
+ * structure to hold sensor data_packed
+ */
+typedef struct {
+    sensor_id_t id __attribute__((packed));         /** < sensor id */
+    sensor_value_t value __attribute__((packed));   /** < sensor value */
+    sensor_ts_t ts __attribute__((packed));    /** < sensor timestamp */
+} sensor_data_packed_t;
+
+
 
 #endif /* _CONFIG_H_ */

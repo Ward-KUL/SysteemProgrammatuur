@@ -1,0 +1,57 @@
+#define _GNU_SOURCE
+
+#include <check.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "sensor_db.h"
+#include "config.h"
+
+
+void setup(void) {
+    // Implement pre-test setup
+}
+
+void teardown(void) {
+    // Implement post-test teardown
+}
+
+START_TEST(test_basic_db){
+    printf("%s\n", sqlite3_libversion());
+    ck_assert(strcmp(sqlite3_libversion(),"") != 0);
+    DBCONN* conn = init_connection(1);
+    disconnect(conn);
+}
+END_TEST
+
+START_TEST(test_insert){
+    FILE* file = fopen("sensor_data","r");
+    DBCONN* conn = init_connection(1);
+    insert_sensor_from_file(conn,file);
+    fclose(file);
+    disconnect(conn);
+}
+END_TEST
+
+
+
+int main(void) {
+    Suite *s1 = suite_create("LIST_EX3");
+    TCase *tc1_1 = tcase_create("Core");
+    SRunner *sr = srunner_create(s1);
+    int nf;
+
+    suite_add_tcase(s1, tc1_1);
+    tcase_add_checked_fixture(tc1_1, setup, teardown);
+    tcase_add_test(tc1_1,test_basic_db);
+    tcase_add_test(tc1_1,test_insert);
+
+
+
+
+    srunner_run_all(sr, CK_VERBOSE);
+
+    nf = srunner_ntests_failed(sr);
+    srunner_free(sr);
+
+    return nf == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
