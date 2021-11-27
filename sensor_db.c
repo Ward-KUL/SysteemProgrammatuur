@@ -70,7 +70,7 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
     if(rc != SQLITE_OK) return rc;
     rc = sqlite3_bind_double(stmt,2,value);
     if(rc != SQLITE_OK) return rc;
-    rc = sqlite3_bind_int64(stmt,3,(long int)time);
+    rc = sqlite3_bind_int64(stmt,3,(long int)ts);
     if(rc != SQLITE_OK) return rc;
 
     rc = sqlite3_step(stmt);
