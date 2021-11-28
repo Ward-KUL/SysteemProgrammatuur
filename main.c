@@ -28,6 +28,10 @@ START_TEST(test_insert){
     DBCONN* conn = init_connection(1);
     insert_sensor_from_file(conn,file);
     fclose(file);
+    find_sensor_all(conn,NULL);
+    find_sensor_by_value(conn,15,NULL);
+    find_sensor_by_timestamp(conn,1636982316,NULL);
+    find_sensor_after_timestamp(conn,1636982316,NULL);
     disconnect(conn);
 }
 END_TEST

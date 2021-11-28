@@ -1,6 +1,11 @@
 #include "sensor_db.h"
 #include <string.h>
 
+// typedef struct{
+//     int sql_code;
+//     sqlite3_stmt* stmt;
+// }querry_result;
+
 void prints(char* string){
     printf("%s\n",string);
 }
@@ -26,6 +31,24 @@ int check_for_SQLOK(int rc,DBCONN* conn,char interrupt_on_error){
     }
     return rc;
 }
+
+int get_result_of_query(DBCONN* conn,char* query,callback_t f){
+    prints(query);
+    printf("New task\n\n\n\n");
+    sqlite3_stmt *stmt = NULL;
+    int rc = sqlite3_prepare_v2(conn,query,-1,&stmt,0);
+    check_for_SQLOK(rc,conn,0);
+    if(rc != SQLITE_OK) return rc;
+    rc = SQLITE_ROW;
+    while(rc == SQLITE_ROW){
+        rc = sqlite3_step(stmt);
+        //callback(sqlite3_column_int(stmt,2),)
+        // printf("%d\n",sqlite3_column_int(stmt,0));
+    }
+    sqlite3_finalize(stmt);
+    return SQLITE_OK;
+}
+
 
 DBCONN *init_connection(char clear_up_flag){
     DBCONN *db = NULL;
@@ -103,6 +126,42 @@ int insert_sensor_from_file(DBCONN *conn, FILE *sensor_data){
     }
     return rcB;
 }
+
+int find_sensor_all(DBCONN *conn, callback_t f){
+    char* query = "Select * from " TO_STRING(TABLE_NAME);
+    return get_result_of_query(conn,query,f);
+}
+
+int find_sensor_by_value(DBCONN *conn, sensor_value_t value, callback_t f){
+    char* querry = "Select * from " TO_STRING(TABLE_NAME) " where sensor_value = 15";
+    return get_result_of_query(conn,querry,f);
+}
+
+int find_sensor_exceed_value(DBCONN *conn, sensor_value_t value, callback_t f){
+    char* query = "Select * from " TO_STRING(TABLE_NAME) " where sensor_value > " TO_STRING(value);
+    return get_result_of_query(conn,query,f);
+}
+
+int find_sensor_by_timestamp(DBCONN *conn, sensor_ts_t ts, callback_t f){
+    char* query = "Select * from " TO_STRING(TABLE_NAME) " where timestamp = ";
+    char* combined = malloc(sizeof(char)*10+sizeof(query));
+    sprintf(combined,"%s%ld",query,ts);
+    int r = get_result_of_query(conn,combined,f);
+    free(combined);
+    return r;
+    
+}
+
+int find_sensor_after_timestamp(DBCONN *conn, sensor_ts_t ts, callback_t f){
+    char* query = "Select * from " TO_STRING(TABLE_NAME) " where timestamp > ";
+    char* combined = malloc(sizeof(char)*10+sizeof(query));
+    sprintf(combined,"%s%ld",query,ts);
+    int r = get_result_of_query(conn,combined,f);
+    free(combined);
+    return r;
+}
+
+
 
 
 
