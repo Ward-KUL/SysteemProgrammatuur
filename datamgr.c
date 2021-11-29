@@ -6,7 +6,11 @@
 #include "lib/dplist.h"
 
 
-typedef dplist_t average_data_t;
+typedef struct{
+    sensor_value_t run_avg[RUN_AVG_LENGTH];
+    int lastPos;
+    sensor_value_t previous_avg;
+}average_data_t;
 
 
 /**
@@ -34,9 +38,8 @@ int int_compare(void* x, void* y);
 void print_sensor(sensor_data_t* sensor);
 sensor_data_t* convert_packed(sensor_data_packed_t* p);
 void parse_line_to_sensor_node(char* line);
-void add_time_to_sensor(dplist_t*);
-void add_new_measurement_to_average(sensor_node_t* node,sensor_data_t* data);
 sensor_node_t* find_sensor_id(sensor_id_t id);
+size_t get_size_of_array(sensor_value_t* array);
 
 //testing function
 void printSensorElements(dplist_t* list){
@@ -66,6 +69,7 @@ void * element_copy(void * element) {
 
 void element_free(void ** element) {
     //printf("This should be the element: %c\n",*(((my_element_t*)*element))->name);
+    free(((sensor_node_t*)element)->average_data);
     free(*element);
     *element = NULL;
 }
@@ -90,8 +94,8 @@ int int_compare(void* x, void* y){
 }
 
 void node_free(void** node){
-    dplist_t* avg_data = ((sensor_node_t*)*node)->average_data;
-    dpl_free(&avg_data,true);
+    average_data_t* run_avg = ((sensor_node_t*)*node)->average_data;
+    free(run_avg);
     free(*node);
     *node = NULL;
 
@@ -101,19 +105,65 @@ int node_compare(void * x, void * y) {
     return ((((sensor_node_t*)x)->id_sensor < ((sensor_node_t*)y)->id_sensor) ? -1 : (((sensor_node_t*)x)->id_sensor == ((sensor_node_t*)y)->id_sensor) ? 0 : 1);
 }
 
+void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value){
+    node->average_data->run_avg[node->average_data->lastPos] = new_value;
+    node->average_data->lastPos ++;
+    if(node->average_data->lastPos>=RUN_AVG_LENGTH) node->average_data->lastPos =0; //overflow
+    if(get_size_of_array(node->average_data->run_avg) >= RUN_AVG_LENGTH){    
+        //calculate run_avg
+        sensor_value_t sum = 0;
+        for(int i = 0;i < RUN_AVG_LENGTH;i ++){
+            sum += node->average_data->run_avg[i];
+        }
+        sum = sum/RUN_AVG_LENGTH;
+        if((SET_MAX_TEMP < sum) || (sum < SET_MIN_TEMP)){
+            //running avgerage is not what we want anymore
+            printf("The running average of room: %d sensor_id: %d is out of bounds and is %f\nShould be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
+        }
+    }
+}
+
+size_t get_size_of_array(sensor_value_t* array){
+    if(array[0] < -272) return 0;
+    for(size_t i = 0;i<RUN_AVG_LENGTH; i++){
+        if(array[i]<-273){
+            //temperature hasn't been changed by a sensor
+            return i;
+            //printf("Size is %ld: ", i+1);
+        }
+    }
+    
+    return (RUN_AVG_LENGTH);
+}
+
+average_data_t* get_default_avg(){
+    average_data_t* average_data = malloc(sizeof(average_data_t));
+    average_data->lastPos = 0;
+    average_data->previous_avg = 0;
+    for(int i = 0;i<RUN_AVG_LENGTH;i++){
+        average_data->run_avg[i] = -274; //lowest possible temperature which should not be recorded
+    }
+    return average_data;
+}
+
+void add_time_to_sensor(sensor_data_packed_t data){
+    sensor_node_t* sensor = find_sensor_id(data.id);
+    add_new_measurement_to_average(sensor,data.value);
+    if(sensor->last_modified<data.ts) sensor->last_modified = data.ts;
+    return;
+}
+
 
 
 void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
 
     if(node_list != NULL) datamgr_free();//als er nog sensors in de lijst zitten eerst de lijst freeen zodat we geen memory leaks hebben
     //intialize the list
-    dplist_t* data_list = dpl_create(element_copy,element_free,element_compare);
     node_list = dpl_create(NULL,node_free,node_compare);
     //create the list with the sensors
     sensor_node_t* node = malloc(sizeof(sensor_node_t));
     while(fscanf(fp_sensor_map,"%hd %hd",&(node->id_room),&(node->id_sensor))>0){
-        average_data_t* average_data = dpl_create(int_copy,int_free,int_compare);
-        (node->average_data) = average_data;
+        node->average_data = get_default_avg();
         dpl_insert_sorted(node_list,node,false);
         node = malloc(sizeof(sensor_node_t));
     }
@@ -122,48 +172,11 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     //create the list with the data from the sensors
     sensor_data_packed_t data_formatted;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
-        sensor_data_t* data = convert_packed(&data_formatted);
-        //print_sensor(data);
-        if((SET_MAX_TEMP >= (data->value)&& ((data->value) <= SET_MIN_TEMP)))
-            dpl_insert_sorted(data_list,data,true);
-        free(data);
-
+        add_time_to_sensor(data_formatted);
     }
     fclose(fp_sensor_data);
-    //printSensorElements(data_list);
-    add_time_to_sensor(data_list);
     return;   
 
-}
-
-void add_time_to_sensor(dplist_t* data_list){
-    //loop through data list and remove one by one untill all data has been put inside the sensors
-    char node_index = 0;
-    int size  = dpl_size(node_list);
-    while(node_index<size){
-        sensor_node_t* node = dpl_get_element_at_index(node_list,node_index);
-        sensor_data_t* data = dpl_get_element_at_index(data_list,0);
-        while((dpl_get_first_reference(data_list) != NULL) && (((data = dpl_get_element_at_index(data_list,0))->id) == node->id_sensor)){
-            add_new_measurement_to_average(node,data);
-            if(node->last_modified>data->ts) node->last_modified = data->ts;
-            dpl_remove_element(data_list,data,true);
-        }
-        node_index ++;
-                                            //printf("%f\n",*(sensor_value_t*)dpl_get_element_at_index(node->average_data,1));
-    }
-    dpl_free(&data_list,true);
-}
-
-void add_new_measurement_to_average(sensor_node_t* node,sensor_data_t* data){
-    if(dpl_size(node->average_data)>=RUN_AVG_LENGTH){
-        //er moet er eerst ene weg voor we er een kunnen bijsteken
-        dpl_remove_at_index(node->average_data,0,true);
-    }
-    sensor_value_t* new_value = malloc(sizeof(sensor_value_t));
-    *new_value = data->value;
-    dpl_insert_at_index(node->average_data,new_value,99,false);
-    //printf("%f\n",*(sensor_value_t*)dpl_get_element_at_index(node->average_data,0));
-    //printf("%d\n",dpl_size(node->average_data));
 }
 
 void datamgr_free(){
@@ -181,16 +194,9 @@ sensor_value_t datamgr_get_avg(sensor_id_t sensor_id){
     if(node_list == NULL) return -1;
     sensor_node_t* node = find_sensor_id(sensor_id);
     ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamgr");
-    dplist_t* list = node->average_data;
-    char index = 0;
-    int size = dpl_size(list);
+    int size = get_size_of_array(node->average_data->run_avg);
     if(size<RUN_AVG_LENGTH) return 0;
-    int sum = 0;
-    while(index<size){
-        sum += *((sensor_value_t*)dpl_get_element_at_index(list,index));
-        index ++;
-    }
-    return sum/size;
+    else return node->average_data->previous_avg;
 }
 
 time_t datamgr_get_last_modified(sensor_id_t sensor_id){
@@ -204,6 +210,7 @@ int datamgr_get_total_sensors(){
     return dpl_size(node_list);
 }
 
+//function that returns the sensor with the corresponding id from the internal list
 sensor_node_t* find_sensor_id(sensor_id_t id){
     int index = 0;
     int size = dpl_size(node_list);
