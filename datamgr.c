@@ -29,7 +29,6 @@ dplist_t* node_list;
 void* element_copy(void * element);
 void element_free(void ** element);
 int element_compare(void * x, void * y);
-// void* node_copy(void* element);
 void node_free(void** node);
 int node_compare(void * x, void * y);
 void int_free(void** element);
@@ -41,17 +40,6 @@ void parse_line_to_sensor_node(char* line);
 sensor_node_t* find_sensor_id(sensor_id_t id);
 size_t get_size_of_array(sensor_value_t* array);
 
-//testing function
-void printSensorElements(dplist_t* list){
-    int index = 0;
-    while(dpl_size(list)>index){
-        sensor_data_t* data = dpl_get_element_at_index(list,index);
-        printf("sensor id %d, sensor value %f\n", data->id,data->value);
-        index ++;
-    }
-}
-
-
 void * element_copy(void * element) {
     sensor_data_t* copy = malloc(sizeof (sensor_data_t));
     assert(copy != NULL);
@@ -61,14 +49,7 @@ void * element_copy(void * element) {
     return (void *) copy;
 }
 
-// void* node_copy(void* element){
-//     sensor_node_t* copy = malloc(sizeof(sensor_node_t));
-//     assert(copy!=NULL);
-//     copy->average_data = ((sensor_node_t*)element)->
-// }
-
 void element_free(void ** element) {
-    //printf("This should be the element: %c\n",*(((my_element_t*)*element))->name);
     free(((sensor_node_t*)element)->average_data);
     free(*element);
     *element = NULL;
@@ -118,8 +99,9 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
         sum = sum/RUN_AVG_LENGTH;
         if((SET_MAX_TEMP < sum) || (sum < SET_MIN_TEMP)){
             //running avgerage is not what we want anymore
-            printf("The running average of room: %d sensor_id: %d is out of bounds and is %f\nShould be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
+            //printf("The running average of room: %d sensor_id: %d is out of bounds and is %f\nShould be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
         }
+        node->average_data->previous_avg = sum;
     }
 }
 
@@ -129,7 +111,6 @@ size_t get_size_of_array(sensor_value_t* array){
         if(array[i]<-273){
             //temperature hasn't been changed by a sensor
             return i;
-            //printf("Size is %ld: ", i+1);
         }
     }
     
@@ -194,9 +175,7 @@ sensor_value_t datamgr_get_avg(sensor_id_t sensor_id){
     if(node_list == NULL) return -1;
     sensor_node_t* node = find_sensor_id(sensor_id);
     ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamgr");
-    int size = get_size_of_array(node->average_data->run_avg);
-    if(size<RUN_AVG_LENGTH) return 0;
-    else return node->average_data->previous_avg;
+    return node->average_data->previous_avg;
 }
 
 time_t datamgr_get_last_modified(sensor_id_t sensor_id){
