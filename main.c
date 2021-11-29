@@ -6,6 +6,14 @@
 #include "sensor_db.h"
 #include "config.h"
 
+int print_row(void* arg1,int num_columns, char ** column_value, char** column_name){
+    int i;
+    for(i =1;i< num_columns; i++){
+        //printf("[%s=%s]\t",column_name[i],column_value[i] ? column_value[i] : NULL);
+    }
+    //printf("\n");
+    return 0;
+}
 
 void setup(void) {
     // Implement pre-test setup
@@ -28,10 +36,10 @@ START_TEST(test_insert){
     DBCONN* conn = init_connection(1);
     insert_sensor_from_file(conn,file);
     fclose(file);
-    find_sensor_all(conn,NULL);
-    find_sensor_by_value(conn,15,NULL);
-    find_sensor_by_timestamp(conn,1636982316,NULL);
-    find_sensor_after_timestamp(conn,1636982316,NULL);
+    find_sensor_all(conn,print_row);
+    find_sensor_by_value(conn,15,print_row);
+    find_sensor_by_timestamp(conn,1636982316,print_row);
+    find_sensor_after_timestamp(conn,1636982316,print_row);
     disconnect(conn);
 }
 END_TEST
@@ -47,7 +55,7 @@ int main(void) {
     suite_add_tcase(s1, tc1_1);
     tcase_add_checked_fixture(tc1_1, setup, teardown);
     tcase_add_test(tc1_1,test_basic_db);
-    tcase_add_test(tc1_1,test_insert);
+   tcase_add_test(tc1_1,test_insert);
 
 
 

@@ -33,20 +33,11 @@ int check_for_SQLOK(int rc,DBCONN* conn,char interrupt_on_error){
 }
 
 int get_result_of_query(DBCONN* conn,char* query,callback_t f){
-    prints(query);
-    printf("New task\n\n\n\n");
-    sqlite3_stmt *stmt = NULL;
-    int rc = sqlite3_prepare_v2(conn,query,-1,&stmt,0);
-    check_for_SQLOK(rc,conn,0);
-    if(rc != SQLITE_OK) return rc;
-    rc = SQLITE_ROW;
-    while(rc == SQLITE_ROW){
-        rc = sqlite3_step(stmt);
-        //callback(sqlite3_column_int(stmt,2),)
-        // printf("%d\n",sqlite3_column_int(stmt,0));
-    }
-    sqlite3_finalize(stmt);
-    return SQLITE_OK;
+    //prints(query);
+    //printf("New task\n\n\n\n");
+    char* err_msg;
+    int rc = sqlite3_exec(conn,query,f,0,&err_msg);
+    return rc;
 }
 
 
