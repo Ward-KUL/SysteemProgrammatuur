@@ -164,7 +164,7 @@ dplist_t *dpl_remove_at_index(dplist_t *list, int index, bool free_element) {
     if(list->head == NULL) return list;
     node = list->head;
     unsigned int size = dpl_size(list);
-    if(index<=0) {
+    if(index<=0 || size==1) {
         list->head = node->next;
         if(free_element == true)
             list->element_free(&(node->element));

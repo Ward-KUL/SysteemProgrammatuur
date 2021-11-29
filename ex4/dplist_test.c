@@ -648,6 +648,27 @@ START_TEST(test_labtool){
 }
 END_TEST
 
+START_TEST(test_labtool2){
+    dplist_t* list = dpl_create(element_copy,element_free,element_compare);
+    my_element_t* e1 = make_element(1,'a');
+    my_element_t* e2 = make_element(2,'b');
+    my_element_t* e3 = make_element(3,'c');
+    dpl_insert_at_index(list,e1,0,false);
+    dpl_insert_at_index(list,e2,5,false);
+    dpl_insert_at_index(list,e3,1,false);
+    ck_assert(dpl_get_element_at_index(list,0) == e1);
+    ck_assert(dpl_get_element_at_index(list,1) == e3);
+    ck_assert(dpl_get_element_at_index(list,2) == e2);
+    element_free((void**)&e1);
+    dpl_remove_at_index(list,0,false);
+    dpl_remove_at_index(list,0,true);
+    ck_assert(dpl_size(list)==1);
+    dpl_remove_at_index(list,99,true);
+    ck_assert(dpl_size(list) == 0);
+    dpl_free(&list,true);
+}
+END_TEST
+
 int main(void) {
     Suite *s1 = suite_create("LIST_EX3");
     TCase *tc1_1 = tcase_create("Core");
@@ -675,6 +696,7 @@ int main(void) {
     tcase_add_test(tc1_1,test_remove_element);
     tcase_add_test(tc1_1,test_insert_sorted);
     tcase_add_test(tc1_1,test_labtool);
+    tcase_add_test(tc1_1,test_labtool2);
 
 
 
