@@ -6,6 +6,19 @@
 #include "lib/dplist.h"
 
 
+typedef dplist_t average_data_t;
+
+
+/**
+ * structure to hold sensornode data
+ */
+typedef struct{
+    sensor_id_t id_sensor;
+    room_id_t id_room;
+    average_data_t* average_data;
+    sensor_ts_t last_modified;
+}sensor_node_t;
+
 dplist_t* node_list;
 
 

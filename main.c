@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include "lib/dplist.h"
 #include "datamgr.h"
+#include "config.h"
 
 
 void setup(void) {
