@@ -21,7 +21,7 @@ shared_gdb:
 	gcc --shared -o libdplist.so dplist.o
 	gcc -g main.c datamgr.c -L./ -Wl,-rpath=./ -ldplist -Wall -Werror -DSET_MAX_TEMP=20 -DSET_MIN_TEMP=10 -o datamgr_shared -lm $(shell pkg-config --cflags --libs check)
 	export CK_FORK=no; gdb -tui -q ./datamgr_shared
-shared_val:
+val:
 	gcc -fPIC -c lib/dplist.c
 	gcc --shared -o libdplist.so dplist.o
 	gcc -g main.c datamgr.c -L./ -Wl,-rpath=./ -ldplist -Wall -Werror -DSET_MAX_TEMP=20 -DSET_MIN_TEMP=10 -o datamgr_shared -lm $(shell pkg-config --cflags --libs check)

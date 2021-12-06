@@ -145,6 +145,7 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     sensor_node_t* node = malloc(sizeof(sensor_node_t));
     while(fscanf(fp_sensor_map,"%hd %hd",&(node->id_room),&(node->id_sensor))>0){
         node->average_data = get_default_avg();
+        node->last_modified = 0;
         dpl_insert_sorted(node_list,node,false);
         node = malloc(sizeof(sensor_node_t));
     }
