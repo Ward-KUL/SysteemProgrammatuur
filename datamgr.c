@@ -99,7 +99,7 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
         sum = sum/RUN_AVG_LENGTH;
         if((SET_MAX_TEMP < sum) || (sum < SET_MIN_TEMP)){
             //running avgerage is not what we want anymore
-            //printf("The running average of room: %d sensor_id: %d is out of bounds and is %f\nShould be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
+            fprintf(stderr,"The running average of room: %d sensor_id: %d is out of bounds and is %f. Should be between max:%f and min:%f\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
         }
         node->average_data->previous_avg = sum;
     }
@@ -150,13 +150,13 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
         node = malloc(sizeof(sensor_node_t));
     }
     free(node);
-    fclose(fp_sensor_map);
+    // fclose(fp_sensor_map);
     //create the list with the data from the sensors
     sensor_data_packed_t data_formatted;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
         add_time_to_sensor(data_formatted);
     }
-    fclose(fp_sensor_data);
+    // fclose(fp_sensor_data);
     return;   
 
 }
