@@ -1,5 +1,8 @@
+#define _GNU_SOURCE
+
 #include "sensor_db.h"
 #include <string.h>
+#include <stdio.h>
 
 // typedef struct{
 //     int sql_code;
@@ -32,11 +35,11 @@ int check_for_SQLOK(int rc,DBCONN* conn,char interrupt_on_error){
     return rc;
 }
 
-int get_result_of_query(DBCONN* conn,char* query,callback_t f){
-    //prints(query);
+int get_result_of_querry(DBCONN* conn,char* querry,callback_t f){
+    //prints(querry);
     //printf("New task\n\n\n\n");
     char* err_msg;
-    int rc = sqlite3_exec(conn,query,f,0,&err_msg);
+    int rc = sqlite3_exec(conn,querry,f,0,&err_msg);
     return rc;
 }
 
@@ -76,18 +79,33 @@ void disconnect(DBCONN *conn){
 }
 
 int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_t ts){
-    char* query = "INSERT INTO " TO_STRING(TABLE_NAME) "(sensor_id,sensor_value,timestamp) VALUES(?,?,?)";
+    // char* querry = "INSERT INTO " TO_STRING(TABLE_NAME) "(sensor_id,sensor_value,timestamp) VALUES(?,?,?)";
+    char* querry;
+    asprintf(&querry,"INSERT INTO %s %s", TO_STRING(TABLE_NAME),"(sensor_id,sensor_value,timestamp) VALUES(?,?,?)");
     sqlite3_stmt* stmt = NULL;
-    int rc = sqlite3_prepare_v2(conn,query,-1,&stmt,0);
-    if(rc != SQLITE_OK) return rc;
+    int rc = sqlite3_prepare_v2(conn,querry,-1,&stmt,0);
+    if(rc != SQLITE_OK){
+        return rc;
+        free(querry);
+    } 
     rc = sqlite3_bind_int(stmt,1,id);
-    if(rc != SQLITE_OK) return rc;
+    if(rc != SQLITE_OK){
+        return rc;
+        free(querry);
+    } 
     rc = sqlite3_bind_double(stmt,2,value);
-    if(rc != SQLITE_OK) return rc;
+    if(rc != SQLITE_OK){
+        return rc;
+        free(querry);
+    } 
     rc = sqlite3_bind_int64(stmt,3,(long int)ts);
-    if(rc != SQLITE_OK) return rc;
+    if(rc != SQLITE_OK){
+        return rc;
+        free(querry);
+    } 
 
     rc = sqlite3_step(stmt);
+    free(querry);
     if(rc != 101) //101 -> no more rows available, is logisch aangezien we gewoon een insert willen doen
         return rc;
     rc = sqlite3_finalize(stmt);
@@ -100,14 +118,15 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
 int insert_sensor_from_file(DBCONN *conn, FILE *sensor_data){
     sensor_data_packed_t data_formatted;
     int rcB = SQLITE_OK;
+    int element = 0;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,sensor_data)>0){
         int rc = 1;
-        int amount_of_tries = 0;
-        while(rc != 0 && amount_of_tries<5){
-            //if fails once, try a few more times
-            rc = insert_sensor(conn,data_formatted.id,data_formatted.value,data_formatted.ts);   
-            amount_of_tries ++;
-        }
+        
+        rc = insert_sensor(conn,data_formatted.id,data_formatted.value,data_formatted.ts);   
+
+        printf("line 109: insert %dth element\n",element);
+        element ++;
+        if (element >= 100) return SQLITE_OK;
         if(rc != SQLITE_OK){
             //doesn't work even after multiple tries
             check_for_SQLOK(rc,conn,0);
@@ -119,36 +138,56 @@ int insert_sensor_from_file(DBCONN *conn, FILE *sensor_data){
 }
 
 int find_sensor_all(DBCONN *conn, callback_t f){
-    char* query = "Select * from " TO_STRING(TABLE_NAME);
-    return get_result_of_query(conn,query,f);
+    // char* querry = "Select * from " TO_STRING(TABLE_NAME);
+    char* querry;
+    asprintf(&querry,"%s %s","Select * from", TO_STRING(TABLE_NAME));
+    // printf("Querry = : %s\n",querry);
+    int rc = get_result_of_querry(conn,querry,f);
+    free(querry);
+    return rc;
 }
 
 int find_sensor_by_value(DBCONN *conn, sensor_value_t value, callback_t f){
-    char* querry = "Select * from " TO_STRING(TABLE_NAME) " where sensor_value = 15";
-    return get_result_of_query(conn,querry,f);
+    // char* querry = "Select * from " TO_STRING(TABLE_NAME) " where sensor_value = 15";
+    char* querry;
+    asprintf(&querry,"%s %s %s", "Select * from", TO_STRING(TABLE_NAME),"where sensor_value = 15");
+        // printf("Querry = : %s\n",querry);
+
+    int rc = get_result_of_querry(conn,querry,f);
+    free(querry);
+    return rc;
 }
 
 int find_sensor_exceed_value(DBCONN *conn, sensor_value_t value, callback_t f){
-    char* query = "Select * from " TO_STRING(TABLE_NAME) " where sensor_value > " TO_STRING(value);
-    return get_result_of_query(conn,query,f);
+    // char* querry = "Select * from " TO_STRING(TABLE_NAME) " where sensor_value > " TO_STRING(value);
+    char* querry;
+    asprintf(&querry,"%s %s %s %f","Select * from",TO_STRING(TABLE_NAME),"where sensor_value > ",value);
+        // printf("Querry = : %s\n",querry);
+
+    int rc = get_result_of_querry(conn,querry,f);
+    free(querry);
+    return rc;
 }
 
 int find_sensor_by_timestamp(DBCONN *conn, sensor_ts_t ts, callback_t f){
-    char* query = "Select * from " TO_STRING(TABLE_NAME) " where timestamp = ";
-    char* combined = malloc(sizeof(char)*10+sizeof(query));
-    sprintf(combined,"%s%ld",query,ts);
-    int r = get_result_of_query(conn,combined,f);
-    free(combined);
+    // char* querry = "Select * from " TO_STRING(TABLE_NAME) " where timestamp = ";
+    char* querry;
+    asprintf(&querry,"%s %s %s %ld","Select * from",TO_STRING(TABLE_NAME),"where timestamp =",ts);
+        // printf("Querry = : %s\n",querry);
+
+    int r = get_result_of_querry(conn,querry,f);
+    free(querry);
     return r;
-    
 }
 
 int find_sensor_after_timestamp(DBCONN *conn, sensor_ts_t ts, callback_t f){
-    char* query = "Select * from " TO_STRING(TABLE_NAME) " where timestamp > ";
-    char* combined = malloc(sizeof(char)*10+sizeof(query));
-    sprintf(combined,"%s%ld",query,ts);
-    int r = get_result_of_query(conn,combined,f);
-    free(combined);
+    // char* querry = "Select * from " TO_STRING(TABLE_NAME) " where timestamp > ";
+    char* querry;
+    asprintf(&querry,"%s %s %s %ld","Select * from",TO_STRING(TABLE_NAME),"where timestamp >",ts);
+        printf("Querry = : %s\n",querry);
+
+    int r = get_result_of_querry(conn,querry,f);
+    free(querry);
     return r;
 }
 
