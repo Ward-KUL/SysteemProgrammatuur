@@ -126,7 +126,7 @@ int insert_sensor_from_file(DBCONN *conn, FILE *sensor_data){
 
         printf("line 109: insert %dth element\n",element);
         element ++;
-        if (element >= 100) return SQLITE_OK;
+        // if (element >= 100) return SQLITE_OK;
         if(rc != SQLITE_OK){
             //doesn't work even after multiple tries
             check_for_SQLOK(rc,conn,0);
