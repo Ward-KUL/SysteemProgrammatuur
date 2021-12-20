@@ -25,6 +25,8 @@
 
 #define DBCONN sqlite3
 
+#define MAX_BUFFER_SIZE 150
+
 typedef int (*callback_t)(void *, int, char **, char **);
 
 /**
