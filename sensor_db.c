@@ -196,18 +196,17 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
 int insert_sensor_from_file(DBCONN *conn, FILE *sensor_data){
     sensor_data_packed_t data_formatted;
     int rcB = SQLITE_OK;
-    int element = 0;
+    // int element = 0;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,sensor_data)>0){
         int rc = 1;
         
         rc = insert_sensor(conn,data_formatted.id,data_formatted.value,data_formatted.ts);   
 
-        // printf("line 109: insert %dth element\n",element);
-        char* msg;
-        asprintf(&msg,"line 109: insert %dth element",element);
-        write_to_logger(msg);
-        free(msg);
-        element ++;
+        // char* msg;
+        // asprintf(&msg,"line 109: inserted %dth element",element);
+        // write_to_logger(msg);
+        // free(msg);
+        // element ++;
         // if (element >= 100) return SQLITE_OK;
         if(rc != SQLITE_OK){
             //failed to insert

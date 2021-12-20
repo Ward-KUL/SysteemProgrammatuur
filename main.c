@@ -54,8 +54,14 @@ int main(void) {
 
     suite_add_tcase(s1, tc1_1);
     tcase_add_checked_fixture(tc1_1, setup, teardown);
+
+    //change timeout
+   tcase_set_timeout(tc1_1,15);
+
     tcase_add_test(tc1_1,test_basic_db);
    tcase_add_test(tc1_1,test_insert);
+
+   
 
 
 
