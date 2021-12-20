@@ -16,6 +16,9 @@ vals:
 	gcc -g main.c sensor_db.c -o sensor_db.out -lsqlite3 -Wall -std=c99 -lm $(shell pkg-config --cflags --libs check)
 	valgrind --leak-check=full ./sensor_db.out
 
+tol:
+	ccpcheck
+
 # the files for ex2 will be ziped and are then ready to
 # be submitted to labtools.groept.be
 zip:

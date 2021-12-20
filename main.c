@@ -9,9 +9,9 @@
 int print_row(void* arg1,int num_columns, char ** column_value, char** column_name){
     int i;
     for(i =1;i< num_columns; i++){
-        //printf("[%s=%s]\t",column_name[i],column_value[i] ? column_value[i] : NULL);
+        printf("[%s=%s]\t",column_name[i],column_value[i] ? column_value[i] : NULL);
     }
-    //printf("\n");
+    printf("\n");
     return 0;
 }
 
