@@ -67,7 +67,7 @@ int main(void) {
     int conn_counter = 0;
     dplist_t* tcp_list = dpl_create(copy_tcp,free_tcp,NULL); //NEEDS TO BE FREED STILL    
 
-    printf("Test server is started\n");
+    printf("Test server has started\n");
     if (tcp_passive_open(&server, PORT) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     active_connection_t* server_conn = get_conn(server);
     dpl_insert_at_index(tcp_list,server_conn,99,false);
@@ -82,6 +82,21 @@ int main(void) {
             fds[i].events = POLLIN;
         }
         int ret = poll(fds,conn_counter,TIMEOUT);
+        //check for timeouts before continuing
+        for(int i = 1; i<conn_counter;i++){ //and skip the server
+            active_connection_t* conn = dpl_get_element_at_index(tcp_list,i);
+            time_t timer;
+            time(&timer);
+            if((conn->ts - timer) > TIMEOUT){
+                //the connection has timed out
+                tcp_close(&(conn->socket));
+                dpl_remove_at_index(tcp_list,i,false);
+                //remove the result from the polling as well
+                fds[i].revents = 0;
+                fds[i].fd = -1;
+                fds[i].events = 0;
+            }
+        }
         //something has happened -> check which device
         if(ret>0){
             for(int x = 0;x<conn_counter;x++){
@@ -134,10 +149,14 @@ int main(void) {
                 
             }
         }
+        else if(ret == 0){
+            printf("Server timed out\n");
+            break;
+        }
     } while (1);//keep it running
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     printf("Test server is shutting down\n");
-    dpl_free(&tcp_list,true);
+    dpl_free(&tcp_list,false);
     return 0;
 }
 
