@@ -27,6 +27,9 @@
 
 typedef struct active_connection active_connection_t;
 
+void connmgr_listen(int port_number);
+
+void connmgr_free();
 
 
 #endif  //CONNMGR_H_

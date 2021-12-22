@@ -10,10 +10,11 @@
 #include "lib/tcpsock.h"
 #include "lib/dplist.h"
 #include <poll.h>
+#include <stdbool.h>
 // #include <stropts.h>
 
 
-#define PORT 5678
+
 
 
 struct active_connection{
@@ -59,7 +60,16 @@ active_connection_t* get_conn(tcpsock_t* sock){
  * Implements a sequential test server (only one connection at the same time)
  */
 
-int main(void) {
+//global variables
+bool server_running = false;
+
+void connmgr_free(){
+    server_running = false;
+    printf("Server closed externally\n");
+}
+
+void connmgr_listen(int port_number){
+    server_running = true;
 
     tcpsock_t *server, *client;
     sensor_data_t data;
@@ -68,7 +78,7 @@ int main(void) {
     dplist_t* tcp_list = dpl_create(copy_tcp,free_tcp,NULL); //NEEDS TO BE FREED STILL    
 
     printf("Test server has started\n");
-    if (tcp_passive_open(&server, PORT) != TCP_NO_ERROR) exit(EXIT_FAILURE);
+    if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     active_connection_t* server_conn = get_conn(server);
     dpl_insert_at_index(tcp_list,server_conn,99,false);
     do {
@@ -154,11 +164,10 @@ int main(void) {
             printf("Server timed out\n");
             break;
         }
-    } while (1);//keep it running
+    } while (server_running);//keep it running
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     printf("Test server is shutting down\n");
     dpl_free(&tcp_list,false);
-    return 0;
 }
 
 

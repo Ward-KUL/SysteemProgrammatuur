@@ -1,6 +1,6 @@
 # Create your own targets that compile the application
 test:
-	gcc -g -o test_server -lpthread -DTIMEOUT=5 connmgr.c lib/tcpsock.c lib/dplist.c
+	gcc -g -o test_server -lpthread -DTIMEOUT=5 connmgr.c main.c lib/tcpsock.c lib/dplist.c
 	gcc -g -o client -lpthread sensor_node.c lib/tcpsock.c
 server:
 	make test
