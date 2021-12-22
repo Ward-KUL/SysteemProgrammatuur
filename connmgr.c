@@ -16,11 +16,15 @@
 #define PORT 5678
 
 
+struct active_connection{
+    tcpsock_t* socket;//contains the tcp socket 
+    time_t ts;//contains the last timestamp
+};
 
 /**
  * Structure for holding the TCP socket information
  */
-struct tcpsock {
+struct tcpsock{
     long cookie;        /**< if the socket is bound, cookie should be equal to MAGIC_COOKIE */
     // remark: the use of magic cookies doesn't guarantee a 'bullet proof' test
     int sd;             /**< socket descriptor */
@@ -31,12 +35,24 @@ struct tcpsock {
 
 
 void free_tcp(void** tcp){
+    active_connection_t* conn = (active_connection_t*)(*tcp);
+    free(conn);
     free(*tcp);
 }
 void* copy_tcp(void* tcp){
-    tcpsock_t* copy = malloc(sizeof(tcpsock_t));
-    *copy = *(tcpsock_t*)tcp;
-    return copy;
+    printf("NOT IMPLEMENTED COPY TCP\n");
+    // tcpsock_t* copy = malloc(sizeof(tcpsock_t));
+    // *copy = *(tcpsock_t*)tcp;
+    // return copy;
+}
+
+
+active_connection_t* get_conn(tcpsock_t* sock){
+    active_connection_t* conn = malloc(sizeof(active_connection_t));
+    conn->socket = malloc(sizeof(tcpsock_t));
+    *(conn->socket) = *sock;
+    time(&(conn->ts));
+    return conn;
 }
 
 /**
@@ -53,15 +69,16 @@ int main(void) {
 
     printf("Test server is started\n");
     if (tcp_passive_open(&server, PORT) != TCP_NO_ERROR) exit(EXIT_FAILURE);
-    dpl_insert_at_index(tcp_list,server,99,true);
+    active_connection_t* server_conn = get_conn(server);
+    dpl_insert_at_index(tcp_list,server_conn,99,false);
     do {
         //poll for connections
         conn_counter = dpl_size(tcp_list);
         struct pollfd fds[conn_counter];
         for(int i = 0;i<conn_counter;i++){
             // add new fds to the fds to be polled
-            tcpsock_t* temp = dpl_get_element_at_index(tcp_list,i);
-            tcp_get_sd(temp,&fds[i].fd);
+            active_connection_t* temp = dpl_get_element_at_index(tcp_list,i);
+            tcp_get_sd(temp->socket,&fds[i].fd);
             fds[i].events = POLLIN;
         }
         int ret = poll(fds,conn_counter,TIMEOUT);
@@ -76,12 +93,14 @@ int main(void) {
                         //er is iets op de server gebeurd(een nieuwe connectie)
                         if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
                         printf("Incoming client connection\n");
-                        dpl_insert_at_index(tcp_list,client,99,true);
+                        dpl_insert_at_index(tcp_list,get_conn(client),99,false);
                     }
                     else{
                         //iets op de clients veranderd
+                        active_connection_t* client_conn = dpl_get_element_at_index(tcp_list,x);
                         do {
-                            client = dpl_get_element_at_index(tcp_list,x);
+                            client = client_conn->socket;
+                            time(&(client_conn->ts));
                             // read sensor ID
                             bytes = sizeof(data.id);
                             result = tcp_receive(client, (void *) &data.id, &bytes);
@@ -107,18 +126,8 @@ int main(void) {
                                 printf("Error occured on connection to peer\n");
                             }
                             //remove client from the list of active clients
-                            int sd;
-                            tcp_get_sd(client,&sd);
-                            for(int i = 0;i<conn_counter;i++){
-                                tcpsock_t* temp = (tcpsock_t*)dpl_get_element_at_index(tcp_list,i);
-                                int element;
-                                tcp_get_sd(temp,&element);
-                                if(element == sd){
-                                    tcp_close(&client);
-                                    dpl_remove_at_index(tcp_list,i,false);
-                                    break;
-                                }
-                            }
+                            tcp_close(&(client_conn->socket));
+                            dpl_remove_element(tcp_list,client_conn,false);
                         }
                     }
                 }

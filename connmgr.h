@@ -25,6 +25,8 @@
                     } while(0)
 
 
+typedef struct active_connection active_connection_t;
+
 
 
 #endif  //CONNMGR_H_
