@@ -16,14 +16,27 @@
 #define MAX_CONN 3  // state the max. number of connections the server will handle before exiting
 #define TIMEOUT -1
 
+
+/**
+ * Structure for holding the TCP socket information
+ */
+struct tcpsock {
+    long cookie;        /**< if the socket is bound, cookie should be equal to MAGIC_COOKIE */
+    // remark: the use of magic cookies doesn't guarantee a 'bullet proof' test
+    int sd;             /**< socket descriptor */
+    char *ip_addr;      /**< socket IP address */
+    int port;           /**< socket port number */
+};
+
+
+
 void free_tcp(void** tcp){
     free(*tcp);
 }
 void* copy_tcp(void* tcp){
-    printf("TRIED TO USE A FUNCTION WHICH IS NOT IMPLEMENTED\n\n\n\n");
-    // int* copy  = malloc(sizeof(int));
-    // *copy = *((int*)(tcp));
-    // return copy;
+    tcpsock_t* copy = malloc(sizeof(tcpsock_t));
+    *copy = *(tcpsock_t*)tcp;
+    return copy;
 }
 
 /**
@@ -39,9 +52,7 @@ int main(void) {
 
     printf("Test server is started\n");
     if (tcp_passive_open(&server, PORT) != TCP_NO_ERROR) exit(EXIT_FAILURE);
-    int* sd = malloc(sizeof(int)); //socket of server
-    tcp_get_sd(server,sd);
-    dpl_insert_at_index(tcp_list,sd,99,false);
+    dpl_insert_at_index(tcp_list,server,99,true);
     do {
         //poll for connections
         conn_counter = dpl_size(tcp_list);
@@ -49,7 +60,8 @@ int main(void) {
         struct pollfd fds[conn_counter];
         for(int i = 0;i<conn_counter;i++){
             // add new fds to the fds to be polled
-            fds[i].fd = *((int*)dpl_get_element_at_index(tcp_list,i));
+            tcpsock_t* temp = dpl_get_element_at_index(tcp_list,i);
+            tcp_get_sd(temp,&fds[i].fd);
             fds[i].events = POLLIN;
         }
         int ret = poll(fds,conn_counter,10000000);
@@ -66,15 +78,13 @@ int main(void) {
                         //er is iets op de server gebeurd(een nieuwe connectie)
                         if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
                         printf("Incoming client connection\n");
-                        conn_counter++;
-                        int* sd = malloc(sizeof(int));
-                        tcp_get_sd(client,sd);
-                        dpl_insert_at_index(tcp_list,sd,99,false);
+                        dpl_insert_at_index(tcp_list,client,99,true);
                     }
                     else{
                         printf("Client does something\n");
                         //iets op de clients veranderd
                         do {
+                            client = dpl_get_element_at_index(tcp_list,x);
                             // read sensor ID
                             bytes = sizeof(data.id);
                             result = tcp_receive(client, (void *) &data.id, &bytes);
@@ -104,13 +114,15 @@ int main(void) {
                             int sd;
                             tcp_get_sd(client,&sd);
                             for(int i = 0;i<conn_counter;i++){
-                                int element = *(int*)dpl_get_element_at_index(tcp_list,i);
+                                tcpsock_t* temp = (tcpsock_t*)dpl_get_element_at_index(tcp_list,i);
+                                int element;
+                                tcp_get_sd(temp,&element);
                                 if(element == sd){
+                                    tcp_close(&client);
                                     dpl_remove_at_index(tcp_list,i,true);
                                     break;
                                 }
                             }
-                            tcp_close(&client);
                             printf("after %d\n",dpl_size(tcp_list));
                         }
                     }
