@@ -103,7 +103,13 @@ int main(void) {
                             printf("before %d\n",dpl_size(tcp_list));
                             int sd;
                             tcp_get_sd(client,&sd);
-                            dpl_remove_element(tcp_list,&sd,true);
+                            for(int i = 0;i<conn_counter;i++){
+                                int element = *(int*)dpl_get_element_at_index(tcp_list,i);
+                                if(element == sd){
+                                    dpl_remove_at_index(tcp_list,i,true);
+                                    break;
+                                }
+                            }
                             tcp_close(&client);
                             printf("after %d\n",dpl_size(tcp_list));
                         }
