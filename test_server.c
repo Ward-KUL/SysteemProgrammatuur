@@ -119,7 +119,7 @@ int main(void) {
                                 tcp_get_sd(temp,&element);
                                 if(element == sd){
                                     tcp_close(&client);
-                                    dpl_remove_at_index(tcp_list,i,true);
+                                    dpl_remove_at_index(tcp_list,i,false);
                                     break;
                                 }
                             }
@@ -133,6 +133,7 @@ int main(void) {
     } while (1);//keep it running
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     printf("Test server is shutting down\n");
+    dpl_free(&tcp_list,true);
     return 0;
 }
 
