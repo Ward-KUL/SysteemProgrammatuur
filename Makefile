@@ -1,6 +1,6 @@
 # Create your own targets that compile the application
 test:
-	gcc -g -o test_server -lpthread test_server.c lib/tcpsock.c lib/dplist.c
+	gcc -g -o test_server -lpthread -DTIMEOUT=1000 connmgr.c lib/tcpsock.c lib/dplist.c
 	gcc -g -o client -lpthread sensor_node.c lib/tcpsock.c
 server:
 	make test
@@ -18,6 +18,10 @@ client:
 servergdb:
 	make test
 	export CK_FORK=no;gdb -tui ./test_server
+
+val:
+	make test
+	valgrind --leak-check=full ./test_server
 
 
 # the files for ex2 will be ziped and are then ready to

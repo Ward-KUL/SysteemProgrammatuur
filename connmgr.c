@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include "config.h"
+#include "connmgr.h"
 #include "lib/tcpsock.h"
 #include "lib/dplist.h"
 #include <poll.h>
@@ -13,8 +14,7 @@
 
 
 #define PORT 5678
-#define MAX_CONN 3  // state the max. number of connections the server will handle before exiting
-#define TIMEOUT -1
+
 
 
 /**
@@ -44,6 +44,7 @@ void* copy_tcp(void* tcp){
  */
 
 int main(void) {
+
     tcpsock_t *server, *client;
     sensor_data_t data;
     int bytes, result;
@@ -56,7 +57,6 @@ int main(void) {
     do {
         //poll for connections
         conn_counter = dpl_size(tcp_list);
-        // printf("Amount of connections %d \n",conn_counter);
         struct pollfd fds[conn_counter];
         for(int i = 0;i<conn_counter;i++){
             // add new fds to the fds to be polled
@@ -64,24 +64,21 @@ int main(void) {
             tcp_get_sd(temp,&fds[i].fd);
             fds[i].events = POLLIN;
         }
-        int ret = poll(fds,conn_counter,10000000);
+        int ret = poll(fds,conn_counter,TIMEOUT);
         //something has happened -> check which device
         if(ret>0){
-            // printf("currently %d poll's responses\n", ret);
             for(int x = 0;x<conn_counter;x++){
                 if(fds[x].revents & POLLIN){
                     fds[x].revents = 0; //clear the flag again
                     fds[x].events = 0;
                     fds[x].fd = -1;
                     if(x == 0){
-                        printf("Server does something\n");
                         //er is iets op de server gebeurd(een nieuwe connectie)
                         if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
                         printf("Incoming client connection\n");
                         dpl_insert_at_index(tcp_list,client,99,true);
                     }
                     else{
-                        printf("Client does something\n");
                         //iets op de clients veranderd
                         do {
                             client = dpl_get_element_at_index(tcp_list,x);
@@ -110,7 +107,6 @@ int main(void) {
                                 printf("Error occured on connection to peer\n");
                             }
                             //remove client from the list of active clients
-                            printf("before %d\n",dpl_size(tcp_list));
                             int sd;
                             tcp_get_sd(client,&sd);
                             for(int i = 0;i<conn_counter;i++){
@@ -123,7 +119,6 @@ int main(void) {
                                     break;
                                 }
                             }
-                            printf("after %d\n",dpl_size(tcp_list));
                         }
                     }
                 }
