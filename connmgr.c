@@ -81,13 +81,14 @@ int main(void) {
             tcp_get_sd(temp->socket,&fds[i].fd);
             fds[i].events = POLLIN;
         }
-        int ret = poll(fds,conn_counter,TIMEOUT);
+        int ret = poll(fds,conn_counter,TIMEOUT*1000);
         //check for timeouts before continuing
         for(int i = 1; i<conn_counter;i++){ //and skip the server
             active_connection_t* conn = dpl_get_element_at_index(tcp_list,i);
             time_t timer;
             time(&timer);
-            if((conn->ts - timer) > TIMEOUT){
+            if((timer - conn->ts) > TIMEOUT){
+                printf("Connection timed out \n");
                 //the connection has timed out
                 tcp_close(&(conn->socket));
                 dpl_remove_at_index(tcp_list,i,false);
