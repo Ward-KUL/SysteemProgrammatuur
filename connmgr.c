@@ -37,21 +37,14 @@ struct tcpsock{
 
 void free_tcp(void** tcp){
     active_connection_t* conn = (active_connection_t*)(*tcp);
+    //free(conn->socket); the socket is freeed automatically
     free(conn);
-    free(*tcp);
-}
-void* copy_tcp(void* tcp){
-    printf("NOT IMPLEMENTED COPY TCP\n");
-    // tcpsock_t* copy = malloc(sizeof(tcpsock_t));
-    // *copy = *(tcpsock_t*)tcp;
-    // return copy;
 }
 
 
 active_connection_t* get_conn(tcpsock_t* sock){
     active_connection_t* conn = malloc(sizeof(active_connection_t));
-    conn->socket = malloc(sizeof(tcpsock_t));
-    *(conn->socket) = *sock;
+    conn->socket = sock;
     time(&(conn->ts));
     return conn;
 }
@@ -75,7 +68,7 @@ void connmgr_listen(int port_number){
     sensor_data_t data;
     int bytes, result;
     int conn_counter = 0;
-    dplist_t* tcp_list = dpl_create(copy_tcp,free_tcp,NULL); //NEEDS TO BE FREED STILL    
+    dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); //NEEDS TO BE FREED STILL    
 
     printf("Test server has started\n");
     if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR) exit(EXIT_FAILURE);
@@ -101,7 +94,7 @@ void connmgr_listen(int port_number){
                 printf("Connection timed out \n");
                 //the connection has timed out
                 tcp_close(&(conn->socket));
-                dpl_remove_at_index(tcp_list,i,false);
+                dpl_remove_at_index(tcp_list,i,true);
                 //remove the result from the polling as well
                 fds[i].revents = 0;
                 fds[i].fd = -1;
@@ -153,7 +146,7 @@ void connmgr_listen(int port_number){
                             }
                             //remove client from the list of active clients
                             tcp_close(&(client_conn->socket));
-                            dpl_remove_element(tcp_list,client_conn,false);
+                            dpl_remove_element(tcp_list,client_conn,true);
                         }
                     }
                 }
@@ -167,7 +160,7 @@ void connmgr_listen(int port_number){
     } while (server_running);//keep it running
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     printf("Test server is shutting down\n");
-    dpl_free(&tcp_list,false);
+    dpl_free(&tcp_list,true);
 }
 
 
