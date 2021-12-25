@@ -22,6 +22,9 @@ servergdb:
 val:
 	make test
 	valgrind --leak-check=full ./test_server
+toledo:
+	gcc -g -o test_server -Wall -Werror -DLOOPS=5 -std=c11 -lpthread -DTIMEOUT=5 connmgr.c main.c lib/tcpsock.c lib/dplist.c
+	gcc -g -o client -lpthread sensor_node.c lib/tcpsock.c
 
 
 # the files for ex2 will be ziped and are then ready to

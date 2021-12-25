@@ -68,7 +68,9 @@ void connmgr_listen(int port_number){
     sensor_data_t data;
     int bytes, result;
     int conn_counter = 0;
-    dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); //NEEDS TO BE FREED STILL    
+    dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); 
+
+    FILE* file = fopen("sensor_data_recv","w");  
 
     printf("Test server has started\n");
     if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR) exit(EXIT_FAILURE);
@@ -130,7 +132,7 @@ void connmgr_listen(int port_number){
                             bytes = sizeof(data.ts);
                             result = tcp_receive(client, (void *) &data.ts, &bytes);
                             if ((result == TCP_NO_ERROR) && bytes) {
-                                printf("sensor id = %" PRIu16 " - temperature = %g - timestamp = %ld\n", data.id, data.value,
+                                fprintf(file,"sensor id = %" PRIu16 " - temperature = %g - timestamp = %ld\n", data.id, data.value,
                                     (long int) data.ts);
                             }
                             //received a complete package from a sensor -> let's listen for other sensors
@@ -161,6 +163,7 @@ void connmgr_listen(int port_number){
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     printf("Test server is shutting down\n");
     dpl_free(&tcp_list,true);
+    fclose(file);
 }
 
 
