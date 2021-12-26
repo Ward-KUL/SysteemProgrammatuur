@@ -6,22 +6,18 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-struct mutex_data{
-    sbuffer_t* buffer;
-    pthread_mutex_t lock;
-};
 
-mutex_data_t* get_mutex_data(){
-    mutex_data_t* mut = malloc(sizeof(mutex_data_t));
-    sbuffer_t* buffer;
-    if(sbuffer_init(&buffer) != 0){
-        printf("failed to initialize the buffer\n");
-        exit(EXIT_FAILURE);
-    }
-    mut->buffer = buffer;
-    pthread_mutex_init(&(mut->lock),NULL);
-    return mut;
-}
+// mutex_data_t* get_mutex_data(){
+//     mutex_data_t* mut = malloc(sizeof(mutex_data_t));
+//     sbuffer_t* buffer;
+//     if(sbuffer_init(&buffer) != 0){
+//         printf("failed to initialize the buffer\n");
+//         exit(EXIT_FAILURE);
+//     }
+//     mut->buffer = buffer;
+//     pthread_mutex_init(&(mut->lock),NULL);
+//     return mut;
+// }
 
 sensor_data_t* convert_sensor(sensor_data_packed_t orig){
     sensor_data_t* converted = malloc(sizeof(sensor_data_t));
@@ -50,18 +46,27 @@ void* get_succes_code(){
 
 void *writer_start_routine(void *arg){
     printf("writer routine called\n");
-    mutex_data_t* mut = arg;
-    write_file(mut->buffer);
+    sbuffer_t* buffer = arg;
+    write_file(buffer);
     return get_succes_code();
 }
 
-void read_from_buffer(){
-    
+sensor_data_t* read_from_buffer(sbuffer_t* buffer){
+    sensor_data_t* data = malloc(sizeof(sensor_data_t));
+    sbuffer_node_t* node = NULL;
+    int res = sbuffer_read_and_remove(buffer,data,node);
+    if(res != SBUFFER_SUCCESS){
+        if(res == SBUFFER_NO_DATA)
+            usleep(10000);//sleep for 10 ms
+        else
+            printf("Failure reading from buffer\n");
+    }
+    return data;
 }
 
 void *slow_reader_routine(void *arg){
     printf("slow routine called\n");
-    
+
     return get_succes_code();
 }
 
@@ -73,15 +78,18 @@ void *fast_reader_routine(void *arg){
 void start_threads(){
     printf("Trying to start threads\n");
     pthread_t writer,reader_slow,reader_fast;
-    mutex_data_t* mut = get_mutex_data();
-    void* buffer = mut->buffer;
+    sbuffer_t* buffer;
+    if(sbuffer_init(&buffer) != 0){
+        printf("failed to initialize the buffer\n");
+        exit(EXIT_FAILURE);
+    }
     pthread_create(&writer,NULL,writer_start_routine,buffer);
     pthread_create(&reader_slow,NULL,slow_reader_routine,buffer);
     pthread_create(&reader_fast,NULL,fast_reader_routine,buffer);
     pthread_join(writer,NULL);
     pthread_join(reader_fast,NULL);
     pthread_join(reader_slow,NULL);
-    sbuffer_free(mut->buffer);
+    sbuffer_free(&buffer);
 }
 
 int main(void){
