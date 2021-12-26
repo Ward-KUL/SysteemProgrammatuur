@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "sbuffer.h"
+#include <stdbool.h>
 
 /**
  * basic node for the buffer, these nodes are linked together to create the buffer
@@ -12,6 +13,7 @@
 typedef struct sbuffer_node {
     struct sbuffer_node *next;  /**< a pointer to the next node*/
     sensor_data_t data;         /**< a structure containing the data */
+    bool has_been_read;         /** boolean that will be set to true once the data has been written*/
 } sbuffer_node_t;
 
 /**
