@@ -90,7 +90,7 @@ int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_
             *node = temp;
             buffer->head = (*node)->next;//zou mss ook gewoon al node->next kunnen zijn
             *data = (*node)->data;
-            pthread_mutex_unlock((&buffer->lock));
+            pthread_mutex_unlock(&(buffer->lock));
             return SBUFFER_SUCCESS;
         }
 
@@ -105,6 +105,7 @@ int sbuffer_insert(sbuffer_t *buffer, sensor_data_t *data) {
     dummy->data = *data;
     dummy->next = NULL;
     dummy->has_been_read = false;
+    pthread_mutex_lock(&(buffer->lock));
     if (buffer->tail == NULL) // buffer empty (buffer->head should also be NULL
     {
         buffer->head = buffer->tail = dummy;
@@ -113,5 +114,6 @@ int sbuffer_insert(sbuffer_t *buffer, sensor_data_t *data) {
         buffer->tail->next = dummy;
         buffer->tail = buffer->tail->next;
     }
+    pthread_mutex_unlock(&(buffer->lock));
     return SBUFFER_SUCCESS;
 }

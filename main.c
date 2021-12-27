@@ -38,7 +38,6 @@ void write_file(sbuffer_t* buffer){
     FILE* file = fopen("sensor_data","r");
     sensor_data_packed_t data_formatted;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,file)>0){
-        sleep(1);
         sbuffer_insert(buffer,convert_sensor(data_formatted));
         printf("writer: data is:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
 
@@ -84,7 +83,6 @@ void *slow_reader_routine(void *arg){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                printf("data not available yet\n");
                 usleep(100000);//sleep for 10 ms
             }
             else
@@ -108,7 +106,6 @@ void *fast_reader_routine(void *arg){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                printf("data not available yet\n");
                 usleep(100000);//sleep for 10 ms
             }
             else

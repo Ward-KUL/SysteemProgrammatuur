@@ -1,6 +1,11 @@
 test:
-	gcc -g -o buffer -Wall -Werror -pthread sbuffer.c main.c
+	gcc -g -o buffer -Wall -Werror	 -pthread sbuffer.c main.c
 	./buffer
+
+val:
+	make test
+	valgrind --leak-check=full ./buffer
+
 
 testc:
 	clear
