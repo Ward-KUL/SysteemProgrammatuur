@@ -36,7 +36,7 @@ int sbuffer_free(sbuffer_t **buffer);
  * \param read_node a pointer to the read node which will be updated along the way
  * \return SBUFFER_SUCCESS on success and SBUFFER_FAILURE if an error occurred
  */
-int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_t* read_node);
+int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_t** node);
 
 /**
  * Inserts the sensor data in 'data' at the end of 'buffer' (at the 'tail')

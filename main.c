@@ -7,6 +7,13 @@
 #include <stdlib.h>
 
 
+typedef struct sbuffer_node {
+    struct sbuffer_node *next;  /**< a pointer to the next node*/
+    sensor_data_t data;         /**< a structure containing the data */
+    bool has_been_read;         /** boolean that will be set to true once the data has been written*/
+} sbuffer_node_t;
+
+
 // mutex_data_t* get_mutex_data(){
 //     mutex_data_t* mut = malloc(sizeof(mutex_data_t));
 //     sbuffer_t* buffer;
@@ -31,7 +38,10 @@ void write_file(sbuffer_t* buffer){
     FILE* file = fopen("sensor_data","r");
     sensor_data_packed_t data_formatted;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,file)>0){
+        sleep(1);
         sbuffer_insert(buffer,convert_sensor(data_formatted));
+        printf("writer: data is:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
+
     }
     return;
 }
@@ -51,27 +61,64 @@ void *writer_start_routine(void *arg){
     return get_succes_code();
 }
 
-sensor_data_t* read_from_buffer(sbuffer_t* buffer){
-    sensor_data_t* data = malloc(sizeof(sensor_data_t));
-    sbuffer_node_t* node = NULL;
-    int res = sbuffer_read_and_remove(buffer,data,node);
-    if(res != SBUFFER_SUCCESS){
-        if(res == SBUFFER_NO_DATA)
-            usleep(10000);//sleep for 10 ms
-        else
-            printf("Failure reading from buffer\n");
-    }
-    return data;
-}
+// sensor_data_t* read_from_buffer(sbuffer_t* buffer){
+//     sensor_data_t* data = malloc(sizeof(sensor_data_t));
+//     sbuffer_node_t** node = NULL;
+//     int res = sbuffer_read_and_remove(buffer,data,node);
+//     if(res != SBUFFER_SUCCESS){
+//         if(res == SBUFFER_NO_DATA)
+//             usleep(10000);//sleep for 10 ms
+//         else
+//             printf("Failure reading from buffer\n");
+//     }
+//     return data;
+// }
 
 void *slow_reader_routine(void *arg){
     printf("slow routine called\n");
+    sensor_data_t* data = malloc(sizeof(sensor_data_t));
+    sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
+    sbuffer_t* buffer = arg;
+    while(1){
+        // sleep(1);
+        int res = sbuffer_read_and_remove(buffer,data,node);
+        if(res != SBUFFER_SUCCESS){
+            if(res == SBUFFER_NO_DATA){
+                printf("data not available yet\n");
+                usleep(100000);//sleep for 10 ms
+            }
+            else
+                printf("Failure reading from buffer\n");
+        }
+        else{
+            printf("reader 1: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
+        }
+    }
     return get_succes_code();
 }
 
 void *fast_reader_routine(void *arg){
-    
+    // printf("slow routine called\n");
+    sensor_data_t* data = malloc(sizeof(sensor_data_t));
+    sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
+    sbuffer_t* buffer = arg;
+    while(1){
+        // sleep(1);
+        int res = sbuffer_read_and_remove(buffer,data,node);
+        if(res != SBUFFER_SUCCESS){
+            if(res == SBUFFER_NO_DATA){
+                printf("data not available yet\n");
+                usleep(100000);//sleep for 10 ms
+            }
+            else
+                printf("Failure reading from buffer\n");
+        }
+        else{
+            printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
+
+        }
+    }
     return get_succes_code();
 }
 
