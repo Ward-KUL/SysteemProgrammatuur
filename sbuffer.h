@@ -6,6 +6,7 @@
 #define _SBUFFER_H_
 
 #include "config.h"
+#include <stdbool.h>
 
 #define SBUFFER_FAILURE -1
 #define SBUFFER_SUCCESS 0
@@ -45,5 +46,22 @@ int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_
  * \return SBUFFER_SUCCESS on success and SBUFFER_FAILURE if an error occured
 */
 int sbuffer_insert(sbuffer_t *buffer, sensor_data_t *data);
+
+/**
+ * @brief get function for the is_done_writing flag
+ * 
+ * @param buffer a pointer to the used buffer 
+ * @return the buffer_done_writing flag
+ */
+bool sbuffer_is_buffer_done_writing(sbuffer_t *buffer);
+
+/**
+ * @brief set function for the is_done_writing flag
+ * 
+ * @param buffer a pointer to the buffer
+ * @return  SBUFFER_SUCCESS on success and SBUFFER_FAILURE if an error occured
+ */
+
+int sbuffer_done_writing(sbuffer_t *buffer);
 
 #endif  //_SBUFFER_H_

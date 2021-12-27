@@ -24,6 +24,7 @@ struct sbuffer {
     sbuffer_node_t *head;       /**< a pointer to the first node in the buffer */
     sbuffer_node_t *tail;       /**< a pointer to the last node in the buffer */
     pthread_mutex_t lock;   
+    bool done_writing;          //boolean to know when reading threads can stop reading
 };
 
 int sbuffer_init(sbuffer_t **buffer) {
@@ -31,6 +32,7 @@ int sbuffer_init(sbuffer_t **buffer) {
     if (*buffer == NULL) return SBUFFER_FAILURE;
     (*buffer)->head = NULL;
     (*buffer)->tail = NULL;
+    (*buffer)->done_writing = false;
     pthread_mutex_init(&((*buffer)->lock),NULL);
     return SBUFFER_SUCCESS;
 }
@@ -115,5 +117,15 @@ int sbuffer_insert(sbuffer_t *buffer, sensor_data_t *data) {
         buffer->tail = buffer->tail->next;
     }
     pthread_mutex_unlock(&(buffer->lock));
+    return SBUFFER_SUCCESS;
+}
+
+bool sbuffer_is_buffer_done_writing(sbuffer_t *buffer){
+    return buffer->done_writing;
+}
+
+int sbuffer_done_writing(sbuffer_t *buffer){
+    if(buffer == NULL) return SBUFFER_FAILURE;
+    buffer->done_writing = true;
     return SBUFFER_SUCCESS;
 }

@@ -38,9 +38,15 @@ void write_file(sbuffer_t* buffer){
     FILE* file = fopen("sensor_data","r");
     sensor_data_packed_t data_formatted;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,file)>0){
-        sbuffer_insert(buffer,convert_sensor(data_formatted));
+        sensor_data_t* data = convert_sensor(data_formatted);
+        sbuffer_insert(buffer,data);
+        free(data);
         printf("writer: data is:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
 
+    }
+    if(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS){
+        printf("Couldn't stop the writing process of the buffer\n");
+        return;
     }
     return;
 }
@@ -83,7 +89,13 @@ void *slow_reader_routine(void *arg){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                usleep(100000);//sleep for 10 ms
+                if(sbuffer_is_buffer_done_writing(buffer) == false)
+                    usleep(100000);//sleep for 10 ms
+                else{//there won't be anymore data added
+                    free(node);
+                    free(data);
+                    break;
+                }
             }
             else
                 printf("Failure reading from buffer\n");
@@ -97,7 +109,7 @@ void *slow_reader_routine(void *arg){
 }
 
 void *fast_reader_routine(void *arg){
-    // printf("slow routine called\n");
+    printf("slow routine called\n");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     sbuffer_t* buffer = arg;
@@ -106,7 +118,13 @@ void *fast_reader_routine(void *arg){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                usleep(100000);//sleep for 10 ms
+                if(sbuffer_is_buffer_done_writing(buffer) == false)
+                    usleep(100000);//sleep for 10 ms
+                else{//there won't be anymore data added
+                    free(node);
+                    free(data);
+                    break;
+                }
             }
             else
                 printf("Failure reading from buffer\n");
@@ -127,13 +145,19 @@ void start_threads(){
         printf("failed to initialize the buffer\n");
         exit(EXIT_FAILURE);
     }
+    void *writer_result = NULL;
+    void *reader_slow_result = NULL;
+    void *reader_fast_result = NULL;
     pthread_create(&writer,NULL,writer_start_routine,buffer);
     pthread_create(&reader_slow,NULL,slow_reader_routine,buffer);
     pthread_create(&reader_fast,NULL,fast_reader_routine,buffer);
-    pthread_join(writer,NULL);
-    pthread_join(reader_fast,NULL);
-    pthread_join(reader_slow,NULL);
+    pthread_join(writer,&writer_result);
+    pthread_join(reader_fast,&reader_fast_result);
+    pthread_join(reader_slow,&reader_slow_result);
     sbuffer_free(&buffer);
+    free(writer_result);
+    free(reader_fast_result);
+    free(reader_slow_result);
 }
 
 int main(void){
