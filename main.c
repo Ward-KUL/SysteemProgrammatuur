@@ -44,6 +44,7 @@ void write_file(sbuffer_t* buffer){
         printf("writer: data is:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
 
     }
+    fclose(file);
     if(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS){
         printf("Couldn't stop the writing process of the buffer\n");
         return;

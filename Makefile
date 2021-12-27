@@ -4,7 +4,7 @@ test:
 
 val:
 	make test
-	valgrind --leak-check=full ./buffer
+	valgrind --leak-check=full --show-leak-kinds=all ./buffer
 
 
 testc:
