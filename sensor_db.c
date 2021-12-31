@@ -84,7 +84,12 @@ void start_logger(char* fifo_path){
     if(fclose(fifo_descr) != 0){
         printf("Logger couldn't close fifo\n");
     }
-    fclose(gateway);
+    if(fclose(fifo_descr_wr)!=0){//als we niet meer moeten lezen mag de writer ook dicht
+        printf("Logger couldn't close fifo write\n");
+    }
+    if(fclose(gateway)!=0){
+        printf("Coudlnt' close gateway log file\n");
+    }
     exit(0);
 }
 
@@ -164,6 +169,7 @@ DBCONN *init_connection(char clear_up_flag){
 
 void disconnect(DBCONN *conn){
     sqlite3_close(conn);
+    // fclose(fifo_descr_wr);
     return;
 }
 
