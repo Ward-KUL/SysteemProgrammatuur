@@ -17,7 +17,7 @@ vals:
 	valgrind --leak-check=full ./sensor_db.out
 
 tol:
-	cppcheck --enable=all --suppress=missingIncludeSystem *.c
+	ccpcheck
 
 # the files for ex2 will be ziped and are then ready to
 # be submitted to labtools.groept.be

@@ -13,6 +13,8 @@
 
 int log_count = 0;//global variable for log_count;
 FILE* fifo_descr_wr;
+char* close_fifo_code = "Close fifo code: 1@3k39d";
+pid_t childPid;
 
 typedef struct {
     int result_code;
@@ -79,24 +81,17 @@ void start_logger(char* fifo_path){
             log_count++;
         }
     }
-    while(str_result != NULL);
+    while(strcmp(str_result,close_fifo_code) != 0);
+    printf("logger closes\n");
     //done receiving, close everything
     if(fclose(fifo_descr) != 0){
         printf("Logger couldn't close fifo\n");
     }
-    if(fclose(fifo_descr_wr)!=0){//als we niet meer moeten lezen mag de writer ook dicht
-        printf("Logger couldn't close fifo write\n");
-    }
-    if(fclose(gateway)!=0){
-        printf("Coudlnt' close gateway log file\n");
-    }
-    exit(0);
+    fclose(gateway);
+    exit(50);
 }
 
 pipe_setup_container_t setup_pipe(){
-
-    pid_t childPid;
-
     pipe_setup_container_t cont;
     cont.fifo_path = "fifo_path";
 
@@ -168,8 +163,11 @@ DBCONN *init_connection(char clear_up_flag){
 
 
 void disconnect(DBCONN *conn){
+    write_to_logger(close_fifo_code);
     sqlite3_close(conn);
-    // fclose(fifo_descr_wr);
+    fclose(fifo_descr_wr);
+    // int exit_code;
+    // wait(&exit_code);
     return;
 }
 
