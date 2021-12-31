@@ -6,12 +6,26 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
 
-int pdfs[2];//global pipe variable
+
 int log_count = 0;//global variable for log_count;
+FILE* fifo_descr_wr;
+
+typedef struct {
+    int result_code;
+    char* fifo_path;
+}pipe_setup_container_t;
 
 void write_to_logger(char* to_write){
-    write(pdfs[1],to_write,strlen(to_write)+1);
+    char *send_buf;
+    asprintf(&send_buf,"%s\n",to_write);
+    if(fputs(send_buf,fifo_descr_wr) == EOF){
+        printf("Failed to write to fifo\n");
+    }
+    free(send_buf);
 }
 
 int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
@@ -48,56 +62,70 @@ int get_result_of_querry(DBCONN* conn,char* querry,callback_t f){
     return rc;
 }
 
-void start_logger(int pdfs[]){
-    close(pdfs[1]);//won't read anything
+void start_logger(char* fifo_path){
     int MAX_BUFFER_SIZE = 150;
     char receive_buffer[MAX_BUFFER_SIZE];//set in header file with define
-    int result = 0;
+    char* str_result;
     time_t time_v;
     FILE* gateway = fopen("gateway.log","w");
+    FILE* fifo_descr = fopen(fifo_path,"r");
     do{
-        result = read(pdfs[0],receive_buffer,MAX_BUFFER_SIZE);
-        if(result>0 && strlen(receive_buffer)>0){
+        str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo_descr);
+        if(str_result != NULL){
             //received something
+            str_result[strcspn(str_result, "\n")] = 0;//haal de newline character van str_result
             time(&time_v);//set timer variable to current time
-            fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,receive_buffer);
+            fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result);
             log_count++;
         }
     }
-    while(result>0);
+    while(str_result != NULL);
     //done receiving, close everything
-    close(pdfs[0]);
+    if(fclose(fifo_descr) != 0){
+        printf("Logger couldn't close fifo\n");
+    }
     fclose(gateway);
     exit(0);
 }
 
-int setup_pipe(){
+pipe_setup_container_t setup_pipe(){
 
-    int result;
     pid_t childPid;
 
-    result = pipe(pdfs);
-    if(result != 0){
-        printf("Failed to create pipe \n");
+    pipe_setup_container_t cont;
+    cont.fifo_path = "fifo_path";
+
+    if(mkfifo(cont.fifo_path,0666) != 0){
+        if(errno != EEXIST){
+            printf("Failed to create fifo and it doesn't exist already either\n");
+            exit(EXIT_FAILURE);
+        }
     }
+
     childPid = fork();
     if(childPid == 0){
         //child process, start logger
-        start_logger(pdfs);
-        return 0;
+        start_logger(cont.fifo_path);
+        cont.result_code = 0;
     }
-    else{
-        //run_parent process
-        close(pdfs[0]);//won't need to write as parent process  
-        return 1;      
+    else {
+        cont.result_code = 1;
+        //setup fifo to write to
+        fifo_descr_wr = fopen(cont.fifo_path,"w");
+        if(fifo_descr_wr == NULL){
+            printf("Failed to open the fifo to write data to\n");
+            exit(EXIT_FAILURE);
+        }
     }
+    return cont;
 }
 
 
 
 DBCONN *init_connection(char clear_up_flag){
 
-    if(setup_pipe() == 0) return NULL;//child process which will return once it is done reading
+    pipe_setup_container_t pipe_cont = setup_pipe();
+    if(pipe_cont.result_code == 0) return NULL;//child process which will return once it is done reading
 
     
     DBCONN *db = NULL;
