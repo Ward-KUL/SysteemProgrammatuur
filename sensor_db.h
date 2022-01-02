@@ -35,7 +35,7 @@ typedef int (*callback_t)(void *, int, char **, char **);
  * \param clear_up_flag if the table existed, clear up the existing data when clear_up_flag is set to 1
  * \return the connection for success, NULL if an error occurs
  */
-DBCONN *init_connection(char clear_up_flag,FILE* fifo_descr,char* fifo_exit_code,pthread_mutex_t lock_object);
+DBCONN *init_connection(char clear_up_flag,char* fifo_path,char* fifo_exit_code,pthread_mutex_t lock_object);
 /**
  * Disconnect from the database server
  * \param conn pointer to the current connection
