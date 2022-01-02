@@ -1,4 +1,5 @@
 #define _DEFAULT_SOURCE//for usleep
+#define _GNU_SOURCE
 
 #include "sbuffer.h"
 #include "config.h"
@@ -7,7 +8,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <errno.h>
+#include <string.h>
+#include "datamgr.h"
+#include "sensor_db.h"
+#include <sys/types.h>
+#include <sys/stat.h>
 
 typedef struct sbuffer_node {
     struct sbuffer_node *next;  /**< a pointer to the next node*/
@@ -15,18 +21,9 @@ typedef struct sbuffer_node {
     bool has_been_read;         /** boolean that will be set to true once the data has been written*/
 } sbuffer_node_t;
 
-
-// mutex_data_t* get_mutex_data(){
-//     mutex_data_t* mut = malloc(sizeof(mutex_data_t));
-//     sbuffer_t* buffer;
-//     if(sbuffer_init(&buffer) != 0){
-//         printf("failed to initialize the buffer\n");
-//         exit(EXIT_FAILURE);
-//     }
-//     mut->buffer = buffer;
-//     pthread_mutex_init(&(mut->lock),NULL);
-//     return mut;
-// }
+char* fifo_exit_code = "Close fifo code: 1@3ks93k4j32";
+FILE* fifo_descriptor;
+pthread_mutex_t lock;
 
 sensor_data_t* convert_sensor(sensor_data_packed_t orig){
     sensor_data_t* converted = malloc(sizeof(sensor_data_t));
@@ -70,21 +67,11 @@ void *writer_start_routine(void *arg){
     return get_succes_code();
 }
 
-// sensor_data_t* read_from_buffer(sbuffer_t* buffer){
-//     sensor_data_t* data = malloc(sizeof(sensor_data_t));
-//     sbuffer_node_t** node = NULL;
-//     int res = sbuffer_read_and_remove(buffer,data,node);
-//     if(res != SBUFFER_SUCCESS){
-//         if(res == SBUFFER_NO_DATA)
-//             usleep(10000);//sleep for 10 ms
-//         else
-//             printf("Failure reading from buffer\n");
-//     }
-//     return data;
-// }
 
 void *slow_reader_routine(void *arg){
+    //start the db
     printf("slow routine called\n");
+    // DBCONN* conn = init_connection(1,fifo_descriptor,fifo_exit_code);
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     sbuffer_t* buffer = arg;
@@ -105,10 +92,13 @@ void *slow_reader_routine(void *arg){
                 printf("Failure reading from buffer\n");
         }
         else{
+            // usleep(100000);
+            // insert_sensor(conn,data->id,data->value,data->ts);
             printf("reader 1: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
     }
+    // disconnect(conn);
     return get_succes_code();
 }
 
@@ -118,7 +108,7 @@ void *fast_reader_routine(void *arg){
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     sbuffer_t* buffer = arg;
     while(1){
-        // sleep(1);
+        sleep(1);
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
@@ -164,17 +154,59 @@ void start_threads(){
     free(reader_slow_result);
 }
 
-int main(void){
-    start_threads();
-    return 0;
+void start_logger(){
+    int log_count = 0;
+    int MAX_BUFFER_SIZE = 150;
+    char receive_buffer[MAX_BUFFER_SIZE];//set in header file with define
+    char* str_result;
+    time_t time_v;
+    FILE* gateway = fopen("gateway.log","w");
+    do{
+        // pthread_mutex_lock(&mutex_lock);
+        str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo_descriptor);
+        // pthread_mutex_unlock(&mutex_lock);
+        if(str_result != NULL){
+            //received something
+            str_result[strcspn(str_result, "\n")] = 0;//haal de newline character van str_result
+            time(&time_v);//set timer variable to current time
+            fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result);
+            log_count++;
+        }
+    }
+    while(strcmp(str_result,fifo_exit_code) != 0);
+    printf("logger closes\n");
+    //done receiving, close everything
+    if(fclose(fifo_descriptor) != 0){
+        printf("Logger couldn't close fifo\n");
+    }
+    fclose(gateway);
+    exit(EXIT_SUCCESS);
 }
 
-//Huidige strategie:
-//Ge maakt in de start threads functie de buffer aan die geeft ge mee zoals dat ge de flags 
-//al hebt meegegeven. Dan steekt ge daar de shit in met de writer en leest ge het eruit met
-//de reader. Ge kunt wrs wel werken met de flags maar ik vermoed dat als ge eens kijkt naar 
-//de andere soorten die in de labotekst staan dat ge dan wat meer uitleg zult vinden.
-//en opzich dan zou het niet zo heel moeilijk meer moeten zijn
+int main(void){
+    char* fifo_path = "logFifo";
+    if(mkfifo(fifo_path,0666)!= 0){
+        if(errno != EEXIST){
+            printf("Failed to create fifo and it doesn't exist already either\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    fifo_descriptor = fopen(fifo_path,"r+");//open fifo for reading and writing
+    if(fifo_descriptor == NULL){
+        printf("Failed to open fifo\n");
+        exit(EXIT_FAILURE);
+    }
+    //mutex_lock is globally defined
+    pthread_mutex_init(&lock,NULL);
 
-//een mutex lock op de bool of het al gelezen is of niet zodat ze niet tegelijk schrijven naar de bool
-//als ze dan tegelijk lezen, geen probleem zolang ze maar niet tegelijk proberen de bool aan te passen
+    pid_t childPid = fork();
+    if(childPid == 0){
+        //child process -> start the logger
+        start_logger();
+    }
+    else{
+        //parent process -> start the threads
+        start_threads();
+    }
+    return 0;
+}
