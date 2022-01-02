@@ -40,7 +40,7 @@ void write_file(sbuffer_t* buffer){
         sensor_data_t* data = convert_sensor(data_formatted);
         sbuffer_insert(buffer,data);
         free(data);
-        printf("writer: data is:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
+        // printf("writer: data is:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
 
     }
     fclose(file);
@@ -71,15 +71,12 @@ void *writer_start_routine(void *arg){
 void *slow_reader_routine(void *arg){
     //start the db
     printf("slow routine called\n");
-    // DBCONN* conn = init_connection(1,fifo_descriptor,fifo_exit_code);
-    sleep(4);
-    printf("db has returned\n");
+    DBCONN* conn = init_connection(1,fifo_descriptor,fifo_exit_code,lock);
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     *node = NULL;
     sbuffer_t* buffer = arg;
     while(1){
-        sleep(1);
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
@@ -95,26 +92,23 @@ void *slow_reader_routine(void *arg){
                 printf("Failure reading from buffer\n");
         }
         else{
-            // usleep(100000);
-            // insert_sensor(conn,data->id,data->value,data->ts);
-            printf("reader 1: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
+            insert_sensor(conn,data->id,data->value,data->ts);
+            // printf("reader 1: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
     }
-    // disconnect(conn);
+    disconnect(conn);
     printf("Database is done reading\n");
     return get_succes_code();
 }
 
 void *fast_reader_routine(void *arg){
     printf("slow routine called\n");
-    sleep(5);
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     *node = NULL;
     sbuffer_t* buffer = arg;
     while(1){
-        sleep(1);
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
@@ -130,7 +124,7 @@ void *fast_reader_routine(void *arg){
                 printf("Failure reading from buffer\n");
         }
         else{
-            printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
+            // printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
     }
@@ -171,6 +165,7 @@ void start_logger(){
         // pthread_mutex_lock(&mutex_lock);
         str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo_descriptor);
         // pthread_mutex_unlock(&mutex_lock);
+        printf("Received the following : %s",str_result);
         if(str_result != NULL){
             //received something
             str_result[strcspn(str_result, "\n")] = 0;//haal de newline character van str_result
@@ -214,5 +209,6 @@ int main(void){
         //parent process -> start the threads
         start_threads();
     }
+    
     return 0;
 }

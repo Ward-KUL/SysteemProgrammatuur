@@ -9,18 +9,22 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <pthread.h>    
 
 
 FILE* fifo_descr_wr;
 char* close_fifo_code;
-
+pthread_mutex_t lock;
 
 void write_to_logger(char* to_write){
     char *send_buf;
     asprintf(&send_buf,"%s\n",to_write);
+    pthread_mutex_lock(&lock);
     if(fputs(send_buf,fifo_descr_wr) == EOF){
         printf("Failed to write to fifo\n");
     }
+    pthread_mutex_unlock(&lock);
+    printf("Tried to write the following to the logger %s",send_buf);
     free(send_buf);
 }
 
@@ -61,12 +65,12 @@ int get_result_of_querry(DBCONN* conn,char* querry,callback_t f){
 
 
 
-DBCONN *init_connection(char clear_up_flag,FILE* fifo_descr,char* fifo_exit_code){
+DBCONN *init_connection(char clear_up_flag,FILE* fifo_descr,char* fifo_exit_code,pthread_mutex_t lock_object){
 
     DBCONN *db = NULL;
     close_fifo_code = fifo_exit_code;
     fifo_descr_wr = fifo_descr;
-
+    lock = lock_object;
     
     int rc = sqlite3_open(TO_STRING(DB_NAME),&db);
 
