@@ -2,6 +2,8 @@
  * \author Ward Smets
  */
 
+#define _DEFAULT_SOURCE//for usleep
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -12,6 +14,8 @@
 #include <poll.h>
 #include <stdbool.h>
 // #include <stropts.h>
+#include "sbuffer.h"
+#include <unistd.h>
 
 
 
@@ -61,7 +65,7 @@ void connmgr_free(){
     printf("Server closed externally\n");
 }
 
-void connmgr_listen(int port_number){
+void connmgr_listen(int port_number,sbuffer_t* buffer){
     server_running = true;
 
     tcpsock_t *server, *client;
@@ -132,8 +136,9 @@ void connmgr_listen(int port_number){
                             bytes = sizeof(data.ts);
                             result = tcp_receive(client, (void *) &data.ts, &bytes);
                             if ((result == TCP_NO_ERROR) && bytes) {
-                                fprintf(file,"sensor id = %" PRIu16 " - temperature = %g - timestamp = %ld\n", data.id, data.value,
-                                    (long int) data.ts);
+                                // fprintf(file,"sensor id = %" PRIu16 " - temperature = %g - timestamp = %ld\n", data.id, data.value,
+                                //     (long int) data.ts);
+                                sbuffer_insert(buffer,&data);
                             }
                             //received a complete package from a sensor -> let's listen for other sensors
                             break;
@@ -159,11 +164,13 @@ void connmgr_listen(int port_number){
             printf("Server timed out\n");
             break;
         }
+        usleep(100);
     } while (server_running);//keep it running
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     printf("Test server is shutting down\n");
     dpl_free(&tcp_list,true);
     fclose(file);
+    sbuffer_done_writing(buffer);
 }
 
 

@@ -48,6 +48,13 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data);
 void datamgr_free();
 
 /**
+ * @brief use to add new sensor_data to the data manager, if the sensor has not yet been added.
+ * 
+ * @param data the data of the sensor that is to be added
+ */
+int datamgr_add_new_sensor_data(sensor_data_packed_t data);
+
+/**
  * Gets the room ID for a certain sensor ID
  * Use ERROR_HANDLER() if sensor_id is invalid
  * \param sensor_id the sensor id to look for

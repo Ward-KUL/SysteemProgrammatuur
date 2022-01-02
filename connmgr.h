@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "config.h"
+#include "sbuffer.h"
 
 
 #ifndef TIMEOUT
@@ -27,7 +28,7 @@
 
 typedef struct active_connection active_connection_t;
 
-void connmgr_listen(int port_number);
+void connmgr_listen(int port_number,sbuffer_t* buffer);
 
 void connmgr_free();
 

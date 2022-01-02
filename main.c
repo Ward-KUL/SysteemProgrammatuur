@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include "connmgr.h"
 
 typedef struct sbuffer_node {
     struct sbuffer_node *next;  /**< a pointer to the next node*/
@@ -64,7 +65,9 @@ void* get_succes_code(){
 void *writer_start_routine(void *arg){
     printf("writer routine called\n");
     sbuffer_t* buffer = arg;
-    write_file(buffer);
+    //start tcp_listener
+    connmgr_listen(5678,buffer);
+    connmgr_free();
     return get_succes_code();
 }
 
@@ -97,6 +100,7 @@ void *slow_reader_routine(void *arg){
             // printf("reader 1: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
+        usleep(100);
     }
     disconnect(conn);
     printf("Database is done reading\n");
@@ -106,9 +110,14 @@ void *slow_reader_routine(void *arg){
 void *fast_reader_routine(void *arg){
     printf("slow routine called\n");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
+    sensor_data_packed_t* data_packed = malloc(sizeof(sensor_data_packed_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     *node = NULL;
     sbuffer_t* buffer = arg;
+
+    FILE* sensor_map = fopen("room_sensor.map","r");
+    datamgr_parse_sensor_files(sensor_map,NULL);//we start with only the sensor and there according rooms
+    fclose(sensor_map);
     while(1){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
@@ -118,6 +127,7 @@ void *fast_reader_routine(void *arg){
                 else{//there won't be anymore data added
                     free(node);
                     free(data);
+                    free(data_packed);
                     break;
                 }
             }
@@ -125,9 +135,14 @@ void *fast_reader_routine(void *arg){
                 printf("Failure reading from buffer\n");
         }
         else{
+            data_packed->id = data->id;
+            data_packed->ts = data->ts;
+            data_packed->value = data->value;
+            datamgr_add_new_sensor_data(*data_packed);
             // printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
+        usleep(10);
     }
     return get_succes_code();
 }
@@ -167,14 +182,12 @@ void start_logger(){
         printf("Couldn't open the fifo");
         exit(EXIT_FAILURE);
     }
-    do{
-        
+    do{       
         // pthread_mutex_lock(&mutex_lock);
-        printf("Waiting for stuff\n");
         str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo);
         // pthread_mutex_unlock(&mutex_lock);
-        printf("Received the following : %s",str_result);
         if(str_result != NULL){
+             printf("Received the following : %s",str_result);
             //received something
             str_result[strcspn(str_result, "\n")] = 0;//haal de newline character van str_result
             time(&time_v);//set timer variable to current time

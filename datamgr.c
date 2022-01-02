@@ -127,13 +127,16 @@ average_data_t* get_default_avg(){
     return average_data;
 }
 
-void add_time_to_sensor(sensor_data_packed_t data){
+int datamgr_add_new_sensor_data(sensor_data_packed_t data){
     sensor_node_t* sensor = find_sensor_id(data.id);
+    if(sensor == NULL){
+        //sensor was not found
+        return -1;
+    }
     add_new_measurement_to_average(sensor,data.value);
     if(sensor->last_modified<data.ts) sensor->last_modified = data.ts;
-    return;
+    return 0;
 }
-
 
 
 void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
@@ -150,13 +153,14 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
         node = malloc(sizeof(sensor_node_t));
     }
     free(node);
-    // fclose(fp_sensor_map);
+    
     //create the list with the data from the sensors
-    sensor_data_packed_t data_formatted;
-    while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
-        add_time_to_sensor(data_formatted);
+    if(fp_sensor_data != NULL){
+        sensor_data_packed_t data_formatted;
+        while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
+            datamgr_add_new_sensor_data(data_formatted);
+        }
     }
-    // fclose(fp_sensor_data);
     return;   
 
 }
@@ -190,7 +194,7 @@ int datamgr_get_total_sensors(){
     return dpl_size(node_list);
 }
 
-//function that returns the sensor with the corresponding id from the internal list
+//function that returns the sensor with the corresponding id from the internal list, returns NULL of sensor not found
 sensor_node_t* find_sensor_id(sensor_id_t id){
     int index = 0;
     int size = dpl_size(node_list);
