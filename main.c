@@ -54,12 +54,6 @@ void write_file(sbuffer_t* buffer){
     return;
 }
 
-void* get_succes_code(){
-    int* error_code = malloc(sizeof(int));
-    *error_code  = 0;
-    return (void*)error_code;
-}
-
 
 
 void *writer_start_routine(void *arg){
@@ -68,7 +62,7 @@ void *writer_start_routine(void *arg){
     //start tcp_listener
     connmgr_listen(5678,buffer);
     connmgr_free();
-    return get_succes_code();
+    return;
 }
 
 
@@ -104,7 +98,7 @@ void *slow_reader_routine(void *arg){
     }
     disconnect(conn);
     printf("Database is done reading\n");
-    return get_succes_code();
+    return ;
 }
 
 void *fast_reader_routine(void *arg){
@@ -144,7 +138,8 @@ void *fast_reader_routine(void *arg){
         }
         usleep(10);
     }
-    return get_succes_code();
+    datamgr_free();
+    return;
 }
 
 void start_threads(){

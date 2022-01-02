@@ -59,5 +59,9 @@ run : sensor_gateway sensor_node
 gdb: sensor_gateway sensor_node
 	export CK_FORK=no; gdb -tui -q ./sensor_gateway
 
+val:	sensor_gateway sensor_node
+	valgrind --leak-check=full --show-leak-kinds=all ./sensor_gateway
+
+
 zip:
 	zip lab_final.zip main.c connmgr.c connmgr.h datamgr.c datamgr.h sbuffer.c sbuffer.h sensor_db.c sensor_db.h config.h lib/dplist.c lib/dplist.h lib/tcpsock.c lib/tcpsock.h
