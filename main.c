@@ -81,18 +81,21 @@ void *writer_start_routine(void *arg){
 // }
 
 void *slow_reader_routine(void *arg){
+    sleep(2);
     printf("slow routine called\n");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
+    *node = NULL;
     sbuffer_t* buffer = arg;
     while(1){
-        // sleep(1);
+        sleep(1);
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
                 if(sbuffer_is_buffer_done_writing(buffer) == false)
                     usleep(100000);//sleep for 10 ms
                 else{//there won't be anymore data added
+                    printf("slow reader closing down\n");
                     free(node);
                     free(data);
                     break;
@@ -102,7 +105,7 @@ void *slow_reader_routine(void *arg){
                 printf("Failure reading from buffer\n");
         }
         else{
-            printf("reader 1: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
+            printf("reader slow: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
     }
@@ -110,18 +113,20 @@ void *slow_reader_routine(void *arg){
 }
 
 void *fast_reader_routine(void *arg){
-    printf("slow routine called\n");
+    sleep(3);
+    printf("fast routine called\n");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     sbuffer_t* buffer = arg;
     while(1){
-        // sleep(1);
+        sleep(1);
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
                 if(sbuffer_is_buffer_done_writing(buffer) == false)
                     usleep(100000);//sleep for 10 ms
                 else{//there won't be anymore data added
+                    printf("Fast reader closing down\n");
                     free(node);
                     free(data);
                     break;
@@ -131,7 +136,7 @@ void *fast_reader_routine(void *arg){
                 printf("Failure reading from buffer\n");
         }
         else{
-            printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
+            printf("reader fast: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
     }

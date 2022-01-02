@@ -53,23 +53,19 @@ int sbuffer_free(sbuffer_t **buffer) {
 }
 
 int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_t** node) {
-    //het idee: ge leest de node en geeft de node dat ge gelezen hebt terug,
-    //als ge niet moet verwijderen, geen probleem ga gewoon voort
-    //als ge wel moet verwijderen dan zijt ge de laatste, de vorige node kunt ge dan op 
-    //de head laten wijzen en kunt ge altijd de head verwijderen.
-    //dan zit ge wel met 1 node achter altijd(een teveel in geheugen)
-    //maar dat maakt wel op dan dat ge altijd door heel de buffer moet zitten loopen 
-    //tot ge komt op de node dat ge wilt lezen
+    
     if (buffer == NULL) return SBUFFER_FAILURE;
     if (buffer->head == NULL) return SBUFFER_NO_DATA;
     if(*node == NULL){
-        //first time the buffer is read
+        //first time the thread is reading
         printf("first time reading\n");
+        pthread_mutex_lock(&(buffer->lock));
         *node = buffer->head;
         *data = (*node)->data;
         if((*node)->has_been_read == false){
             (*node)->has_been_read = true;
         }
+        pthread_mutex_unlock(&(buffer->lock));
         return SBUFFER_SUCCESS;
     }
     else{
