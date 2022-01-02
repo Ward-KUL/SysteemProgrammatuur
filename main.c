@@ -72,11 +72,14 @@ void *slow_reader_routine(void *arg){
     //start the db
     printf("slow routine called\n");
     // DBCONN* conn = init_connection(1,fifo_descriptor,fifo_exit_code);
+    sleep(4);
+    printf("db has returned\n");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
+    *node = NULL;
     sbuffer_t* buffer = arg;
     while(1){
-        // sleep(1);
+        sleep(1);
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
@@ -99,13 +102,16 @@ void *slow_reader_routine(void *arg){
         }
     }
     // disconnect(conn);
+    printf("Database is done reading\n");
     return get_succes_code();
 }
 
 void *fast_reader_routine(void *arg){
     printf("slow routine called\n");
+    sleep(5);
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
+    *node = NULL;
     sbuffer_t* buffer = arg;
     while(1){
         sleep(1);
