@@ -1,10 +1,12 @@
+#define _DEFAULT_SOURCE//for usleep
+
 #include "sbuffer.h"
 #include "config.h"
 #include <pthread.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 
 typedef struct sbuffer_node {
@@ -48,6 +50,7 @@ void write_file(sbuffer_t* buffer){
     if(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS){
         printf("Couldn't stop the writing process of the buffer\n");
         return;
+        
     }
     return;
 }

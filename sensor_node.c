@@ -1,6 +1,7 @@
 /**
  * \author Luc Vandeurzen
  */
+#define _XOPEN_SOURCE    /* ALWAYS BEFORE the include statement */
 
 #include <stdio.h>
 #include <string.h>

@@ -99,7 +99,7 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
         sum = sum/RUN_AVG_LENGTH;
         if((SET_MAX_TEMP < sum) || (sum < SET_MIN_TEMP)){
             //running avgerage is not what we want anymore
-            fprintf(stderr,"The running average of room: %d sensor_id: %d is out of bounds and is %f. Should be between max:%f and min:%f\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
+            fprintf(stderr,"LET WEL OP: IN DE VORIGE LABTOOLS MOESTEN MAX EN MIN EEN percent f zijn.\nThe running average of room: %d sensor_id: %d is out of bounds and is %f. Should be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
         }
         node->average_data->previous_avg = sum;
     }
