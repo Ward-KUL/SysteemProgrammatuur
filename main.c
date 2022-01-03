@@ -29,7 +29,7 @@ typedef struct argument_thread{
  * Global variables
  */
 pthread_mutex_t lock;
-FILE* fifo_descr_wr = NULL;
+FILE* fifo_descr_wr = NULL; 
 
 
 void write_to_logger(char* to_write){
@@ -52,7 +52,7 @@ sensor_data_t* convert_sensor(sensor_data_packed_t orig){
 }
 
 void *tcp_listener_routine(void *arg){
-    DEBUG_PRINTF("writer routine called\n");
+    DEBUG_PRINTF("tcp_listener routine called\n");
     argument_thread_t* arguments = arg;
     sbuffer_t* buffer = arguments->buffer;
     connmgr_listen(arguments->port_nr,buffer);
@@ -63,7 +63,7 @@ void *tcp_listener_routine(void *arg){
 
 
 void *database_reader_routine(void *arg){
-    DEBUG_PRINTF("slow routine called\n");
+    DEBUG_PRINTF("database routine called\n");
     DBCONN* conn = init_connection(1);
     ERROR_HANDLER(conn == NULL,"Failed to open the database");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
@@ -96,7 +96,7 @@ void *database_reader_routine(void *arg){
 }
 
 void *datamgr_reader_routine(void *arg){
-    printf("fast routine called\n");
+    DEBUG_PRINTF("datamgr routine called\n");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sensor_data_packed_t* data_packed = malloc(sizeof(sensor_data_packed_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
@@ -136,7 +136,7 @@ void *datamgr_reader_routine(void *arg){
 }
 
 void start_threads(int port_nr,char* fifo_exit_code){
-    printf("Trying to start threads\n");
+    DEBUG_PRINTF("Trying to start threads\n");
     pthread_t writer,reader_slow,reader_fast;
     argument_thread_t* arguments = malloc(sizeof(argument_thread_t));
     sbuffer_t* buffer;

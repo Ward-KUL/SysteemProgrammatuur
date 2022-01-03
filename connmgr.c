@@ -63,6 +63,15 @@ void connmgr_free(){
     DEBUG_PRINTF("Server closed externally\n");
 }
 
+dplist_t* close_connection(active_connection_t* conn,dplist_t* tcp_list){
+    int index = dpl_get_index_of_element(tcp_list,conn);
+    if(index != -1){
+        ERROR_HANDLER(tcp_close(&(conn->socket))!=TCP_NO_ERROR,"Failed to close tcp connection");
+        dpl_remove_at_index(tcp_list,index,true);
+    }
+    return tcp_list;
+}
+
 void tcp_error_received(active_connection_t* conn){
     char* buffer;
     asprintf(&buffer,"Error while receiving info from sensor with id: %d",conn->id);
@@ -128,8 +137,7 @@ void receive_from_client(active_connection_t* client_conn,dplist_t* tcp_list,sbu
             free(buffer);
         }
         //remove client from the list of active clients
-        ERROR_HANDLER(tcp_close(&(client_conn->socket))!=TCP_NO_ERROR,"Failed to close tcp_connection");
-        dpl_remove_element(tcp_list,client_conn,true);
+        close_connection(client_conn,tcp_list);
     }
 }
 
@@ -165,8 +173,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                 write_to_logger(buffer);
                 free(buffer);
                 //the connection has timed out
-                ERROR_HANDLER(tcp_close(&(conn->socket))!=TCP_NO_ERROR,"Failed to close tcp connectoin");
-                dpl_remove_at_index(tcp_list,i,true);
+                tcp_list = close_connection(conn,tcp_list);
                 //remove the result list of connections to poll
                 fds[i].revents = 0;
                 fds[i].fd = -1;
