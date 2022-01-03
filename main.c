@@ -228,27 +228,25 @@ int main(void){
     pid_t childPid = fork();
     if(childPid == 0){
         //child process
-        fifo_descr_wr = fopen(fifo_path,"w");
-        if(fifo_descr_wr == NULL){
-            printf("Failed to open the fifo to write data to it\n");
-            exit(EXIT_FAILURE);
-        }
-        write_to_logger("mama mia");
-        write_to_logger("hallo pizzeria");
-        write_to_logger("momma spaghetti");
-        write_to_logger(fifo_exit_code);
-
-    }
-    else{
-        //parent
         FILE* fifo = fopen(fifo_path,"r");
         if(fifo == NULL){
             printf("Failed to open the fifo to write data to it\n");
             exit(EXIT_FAILURE);
         }
         start_logger(fifo);
-
     }
+    else{
+        //parent
+        fifo_descr_wr = fopen(fifo_path,"w");
+        if(fifo_descr_wr == NULL){
+            printf("Failed to open the fifo to write data to it\n");
+            exit(EXIT_FAILURE);
+        }
+        start_threads();    
+    }
+    // int returncode;
+    // waitpid(childPid,&returncode,0);
+    printf("Everything synced up and closed\n");
 
 
 
