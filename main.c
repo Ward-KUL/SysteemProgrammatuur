@@ -62,7 +62,7 @@ void *writer_start_routine(void *arg){
     //start tcp_listener
     connmgr_listen(5678,buffer);
     connmgr_free();
-    return;
+    return NULL;
 }
 
 
@@ -98,7 +98,7 @@ void *slow_reader_routine(void *arg){
     }
     disconnect(conn);
     printf("Database is done reading\n");
-    return ;
+    return NULL;
 }
 
 void *fast_reader_routine(void *arg){
@@ -139,7 +139,7 @@ void *fast_reader_routine(void *arg){
         usleep(10);
     }
     datamgr_free();
-    return;
+    return NULL;
 }
 
 void start_threads(){
@@ -160,9 +160,9 @@ void start_threads(){
     pthread_join(reader_fast,&reader_fast_result);
     pthread_join(reader_slow,&reader_slow_result);
     sbuffer_free(&buffer);
-    free(writer_result);
-    free(reader_fast_result);
-    free(reader_slow_result);
+    // free(writer_result);
+    // free(reader_fast_result);
+    // free(reader_slow_result);
 }
 
 void start_logger(){
