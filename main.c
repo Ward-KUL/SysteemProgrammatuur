@@ -34,7 +34,7 @@ FILE* fifo_descr_wr = NULL;
 
 
 void write_to_logger(char* to_write){
-    printf("Tried to write the following to the logger %s\n",to_write);
+    printf("LOGGER: %s\n",to_write);
     if(fifo_descr_wr == NULL){
         printf("Couldn't write to fifo because pointer is NULL\n");
         exit(EXIT_FAILURE);
@@ -224,7 +224,7 @@ void start_logger(FILE* fifo){
         printf("Logger couldn't close fifo\n");
     }
     fclose(gateway);
-    waitpid(getppid(),0,0);
+    // waitpid(getppid(),0,0);
     printf("Everything synced up and closed\n");
     exit(EXIT_SUCCESS);
 
@@ -268,6 +268,7 @@ int main(int argc,char *argv[]){
         start_threads(port_nr);   
         fclose(fifo_descr_wr); 
         printf("main process finished \n");
+        waitpid(childPid,0,0);
         exit(EXIT_SUCCESS);
     }   
     return 0;

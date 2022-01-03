@@ -110,7 +110,6 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
             write_to_logger(buffer);
             free(buffer);
         }
-        printf("Average is %f \n",sum);
         node->average_data->previous_avg = sum;
     }
 }
