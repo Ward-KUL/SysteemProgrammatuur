@@ -55,12 +55,12 @@ clean-all: clean
 
 run : sensor_gateway sensor_node
 	@echo "Add your own implementation here..."
-	./sensor_gateway
+	./sensor_gateway 5678
 gdb: sensor_gateway sensor_node
-	export CK_FORK=no; gdb -tui -q ./sensor_gateway
+	export CK_FORK=no; gdb -tui -q --args ./sensor_gateway 5678
 
 val:	sensor_gateway sensor_node
-	valgrind --leak-check=full --show-leak-kinds=all ./sensor_gateway
+	valgrind --leak-check=full --show-leak-kinds=all ./sensor_gateway 5678
 
 
 zip:

@@ -23,6 +23,11 @@ typedef struct sbuffer_node {
     bool has_been_read;         /** boolean that will be set to true once the data has been written*/
 } sbuffer_node_t;
 
+typedef struct argument_thread{
+    sbuffer_t* buffer;
+    int port_nr;
+}argument_thread_t;
+
 char* fifo_exit_code = "Close fifo code: 1@3ks93k4j32";
 pthread_mutex_t lock;
 FILE* fifo_descr_wr = NULL;
@@ -75,9 +80,10 @@ void write_file(sbuffer_t* buffer){
 
 void *writer_start_routine(void *arg){
     printf("writer routine called\n");
-    sbuffer_t* buffer = arg;
+    argument_thread_t* arguments = arg;
+    sbuffer_t* buffer = arguments->buffer;
     //start tcp_listener
-    connmgr_listen(5678,buffer);
+    connmgr_listen(arguments->port_nr,buffer);
     connmgr_free();
     return NULL;
 }
@@ -90,7 +96,8 @@ void *slow_reader_routine(void *arg){
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     *node = NULL;
-    sbuffer_t* buffer = arg;
+    argument_thread_t* arguments = arg;
+    sbuffer_t* buffer = arguments->buffer;
     while(1){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
@@ -124,7 +131,8 @@ void *fast_reader_routine(void *arg){
     sensor_data_packed_t* data_packed = malloc(sizeof(sensor_data_packed_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     *node = NULL;
-    sbuffer_t* buffer = arg;
+    argument_thread_t* arguments = arg;
+    sbuffer_t* buffer = arguments->buffer;
 
     FILE* sensor_map = fopen("room_sensor.map","r");
     datamgr_parse_sensor_files(sensor_map,NULL);//we start with only the sensor and there according rooms
@@ -159,24 +167,28 @@ void *fast_reader_routine(void *arg){
     return NULL;
 }
 
-void start_threads(){
+void start_threads(int port_nr){
     printf("Trying to start threads\n");
     pthread_t writer,reader_slow,reader_fast;
+    argument_thread_t* arguments = malloc(sizeof(argument_thread_t));
     sbuffer_t* buffer;
     if(sbuffer_init(&buffer) != 0){
         printf("failed to initialize the buffer\n");
         exit(EXIT_FAILURE);
     }
+    arguments->buffer = buffer;
+    arguments->port_nr = port_nr;
     void *writer_result = NULL;
     void *reader_slow_result = NULL;
     void *reader_fast_result = NULL;
-    pthread_create(&writer,NULL,writer_start_routine,buffer);
-    pthread_create(&reader_slow,NULL,slow_reader_routine,buffer);
-    pthread_create(&reader_fast,NULL,fast_reader_routine,buffer);
+    pthread_create(&writer,NULL,writer_start_routine,arguments);
+    pthread_create(&reader_slow,NULL,slow_reader_routine,arguments);
+    pthread_create(&reader_fast,NULL,fast_reader_routine,arguments);
     pthread_join(writer,&writer_result);
     pthread_join(reader_fast,&reader_fast_result);
     pthread_join(reader_slow,&reader_slow_result);
     sbuffer_free(&buffer);
+    free(arguments);
     // free(writer_result);
     // free(reader_fast_result);
     // free(reader_slow_result);
@@ -218,8 +230,13 @@ void start_logger(FILE* fifo){
 
 }
 
-int main(void){
+int main(int argc,char *argv[]){
 
+    if(argc != 2){
+        printf("FAILED TO START PROGRAM \n\n\nNeed the tcp port number\ne.g:./gateway 5678");
+        exit(EXIT_SUCCESS);
+    }
+    int port_nr = atoi(argv[1]);
     //mutex lock is globally defined
     pthread_mutex_init(&lock,NULL);
 
@@ -248,54 +265,10 @@ int main(void){
             printf("Failed to open the fifo to write data to it\n");
             exit(EXIT_FAILURE);
         }
-        start_threads();    
+        start_threads(port_nr);   
+        fclose(fifo_descr_wr); 
         printf("main process finished \n");
         exit(EXIT_SUCCESS);
-    }
-    // int returncode;
-    // waitpid(childPid,&returncode,0);
-    
-
-
-
-
-
-
-    // char* fifo_path = "fifo_path";
-    // if(mkfifo(fifo_path,0666)!= 0){
-    //     if(errno != EEXIST){
-    //         printf("Failed to create fifo and it doesn't exist already either\n");
-    //         exit(EXIT_FAILURE);
-    //     }
-    //     else{
-    //         printf("fifo didn't need to be created since it already existed\n");
-    //     }
-    // }
-    // //mutex_lock is globally defined
-    // pthread_mutex_init(&lock,NULL);
-
-    // pid_t childPid = fork();
-    // if(childPid == 0){
-    //     //child process -> start the logger
-    //     FILE* fifo_read = fopen(fifo_path,"r");
-    //     if(fifo_read == NULL){
-    //         printf("Couldn't open the fifo to read from it\n");
-    //         exit(EXIT_FAILURE);
-    //     }
-    //     start_logger(fifo_read);
-    // }
-    // else{
-    //     //parent process -> start the threads
-    //     fifo_descr_wr = fopen(fifo_path,"w");
-    //     if( fifo_descr_wr == NULL){
-    //         printf("Couldn't open the fifo to write to it\n");
-    //         exit(EXIT_FAILURE);
-    //     }
-    //     write_to_logger("plz man");
-    //     start_threads();
-    // }
-    // int exit_code;
-    // waitpid(childPid,&exit_code,0);
-    // printf("Everything synced up and closing");    
+    }   
     return 0;
 }
