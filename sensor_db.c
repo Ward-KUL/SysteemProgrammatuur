@@ -25,6 +25,7 @@ int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
         asprintf(&msg,"Failed to fetch data: %s",err_msg);
         sqlite3_free(err_msg);
         sqlite3_close(db);
+        write_to_logger(msg);
         free(msg);
         exit(EXIT_FAILURE);
     }
@@ -62,12 +63,12 @@ DBCONN *init_connection(char clear_up_flag,char* fifo_exit_code,pthread_mutex_t 
     int rc = sqlite3_open(TO_STRING(DB_NAME),&db);
 
     if(rc != SQLITE_OK){
-        write_to_logger("Couldn't open the database\n");
+        write_to_logger("Unable to connect to SQL server");
         sqlite3_close(db);
         exit(EXIT_FAILURE);
     }
     else{
-        char* str = "Database opened succesfully";
+        char* str = "Connection to SQL server established";
         write_to_logger(str);
     }
 
@@ -76,7 +77,6 @@ DBCONN *init_connection(char clear_up_flag,char* fifo_exit_code,pthread_mutex_t 
         asprintf(&clear_tbl_stmt,"%s %s %s","DROP TABLE IF EXISTS",TO_STRING(TABLE_NAME),";");
         execute_sql_stmt(db,clear_tbl_stmt,0,0);
         free(clear_tbl_stmt);
-        write_to_logger("Cleared the table if it would have exists");
 
     }
     
@@ -84,17 +84,19 @@ DBCONN *init_connection(char clear_up_flag,char* fifo_exit_code,pthread_mutex_t 
     asprintf(&sql_stmt,"%s %s %s","CREATE TABLE IF NOT EXISTS",TO_STRING(TABLE_NAME),"(id INTEGER PRIMARY KEY AUTOINCREMENT, sensor_id	INTEGER NOT NULL, sensor_value NUMERIC NOT NULL, timestamp INTEGER NOT NULL);");
     execute_sql_stmt(db,sql_stmt,0,0);
     free(sql_stmt);
-    write_to_logger("Created new table if didn't exist yet");
+    char* buffer;
+    asprintf(&buffer,"New table %s created",TO_STRING(TABLE_NAME));
+    write_to_logger(buffer);
+    free(buffer);
     
     return db;
 }
 
 
 void disconnect(DBCONN *conn){
+    write_to_logger("Connection to SQL server lost(manually disconnected)");
     write_to_logger(close_fifo_code);
     sqlite3_close(conn);
-    // int exit_code;
-    // wait(&exit_code);
     return;
 }
 

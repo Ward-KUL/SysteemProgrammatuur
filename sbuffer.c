@@ -57,7 +57,6 @@ int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_
     if (buffer->head == NULL) return SBUFFER_NO_DATA;
     if(*node == NULL){
         //first time the buffer is read
-        printf("first time reading\n");
         *node = buffer->head;
         *data = (*node)->data;
         if((*node)->has_been_read == false){
