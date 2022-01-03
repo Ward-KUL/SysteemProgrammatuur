@@ -66,7 +66,7 @@ void connmgr_free(){
 dplist_t* close_connection(active_connection_t* conn,dplist_t* tcp_list){
     int index = dpl_get_index_of_element(tcp_list,conn);
     if(index != -1){
-        ERROR_HANDLER(tcp_close(&(conn->socket))!=TCP_NO_ERROR,"Failed to close tcp connection");
+        tcp_close(&(conn->socket));
         dpl_remove_at_index(tcp_list,index,true);
     }
     return tcp_list;
