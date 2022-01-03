@@ -33,7 +33,7 @@ int sbuffer_init(sbuffer_t **buffer) {
     (*buffer)->head = NULL;
     (*buffer)->tail = NULL;
     (*buffer)->done_writing = false;
-    pthread_mutex_init(&((*buffer)->lock),NULL);
+    ERROR_HANDLER(pthread_mutex_init(&((*buffer)->lock),NULL)!=0,"Failed to initialize mutex");
     return SBUFFER_SUCCESS;
 }
 

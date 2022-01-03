@@ -58,7 +58,7 @@ bool server_running = false;
 
 void connmgr_free(){
     server_running = false;
-    printf("Server closed externally\n");
+    DEBUG_PRINTF("Server closed externally\n");
 }
 
 void tcp_error_received(active_connection_t* conn){
@@ -104,10 +104,7 @@ int receive_via_tcp(active_connection_t* client_conn,sbuffer_t* buffer){
         return result;
     }
     check_if_first_connection(client_conn,data.id);
-    if(sbuffer_insert(buffer,&data)!=SBUFFER_SUCCESS){
-        write_to_logger("Failed to insert data in the buffer");
-        exit(EXIT_FAILURE);
-    }
+    ERROR_HANDLER(sbuffer_insert(buffer,&data)!=SBUFFER_SUCCESS,"Failed to insert data in the buffer");
     return TCP_NO_ERROR;
 }
 
@@ -129,7 +126,7 @@ void receive_from_client(active_connection_t* client_conn,dplist_t* tcp_list,sbu
             free(buffer);
         }
         //remove client from the list of active clients
-        tcp_close(&(client_conn->socket));
+        ERROR_HANDLER(tcp_close(&(client_conn->socket))!=TCP_NO_ERROR,"Failed to close tcp_connection");
         dpl_remove_element(tcp_list,client_conn,true);
     }
 }
@@ -141,10 +138,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
     int conn_counter = 0;
     dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); 
     write_to_logger("Test server has started");
-    if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR){
-        write_to_logger("Couldn't open the tcp_listener on the requested port");
-        exit(EXIT_FAILURE);
-    } 
+    ERROR_HANDLER(tcp_passive_open(&server, port_number) != TCP_NO_ERROR,"Couldn't open the tcp_listener on the requested port");
     active_connection_t* server_conn = get_conn(server);
     dpl_insert_at_index(tcp_list,server_conn,99,false);
     do {
@@ -169,7 +163,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                 write_to_logger(buffer);
                 free(buffer);
                 //the connection has timed out
-                tcp_close(&(conn->socket));
+                ERROR_HANDLER(tcp_close(&(conn->socket))!=TCP_NO_ERROR,"Failed to close tcp connectoin");
                 dpl_remove_at_index(tcp_list,i,true);
                 //remove the result list of connections to poll
                 fds[i].revents = 0;
@@ -186,7 +180,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                     fds[x].fd = -1;
                     if(x == 0){
                         //new connection
-                        if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
+                        ERROR_HANDLER(tcp_wait_for_connection(server, &client) != TCP_NO_ERROR,"Failed to create a new connection");
                         dpl_insert_at_index(tcp_list,get_conn(client),99,false);
                     }
                     else{
@@ -202,7 +196,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             break;
         }
     } while (server_running);//keep tcp_listener running while the flag is high
-    if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
+    ERROR_HANDLER(tcp_close(&server) != TCP_NO_ERROR,"Failed to close server tcp connection");
     write_to_logger("Test server is shutting down");
     dpl_free(&tcp_list,true);
     sbuffer_done_writing(buffer);
