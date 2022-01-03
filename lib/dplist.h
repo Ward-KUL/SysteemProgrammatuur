@@ -228,6 +228,5 @@ dplist_t *dpl_remove_at_reference(dplist_t *list, dplist_node_t *reference, bool
  */
 dplist_t *dpl_remove_element(dplist_t *list, void *element, bool free_element);
 
-// ---- you can add your extra operators here ----//
 
 #endif  // _DPLIST_H_

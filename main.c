@@ -242,6 +242,7 @@ int main(int argc,char *argv[]){
 
     char* fifo_path = "path_to_fifo";
     if(mkfifo(fifo_path,0666) != 0){
+        ERROR_HANDLER(errno == EEXIST,"Failed to create fifo and it doesn't exist already either");
         if(errno != EEXIST){
             printf("Failed to create fifo and it doesn't exist already either\n");
             exit(EXIT_FAILURE);
@@ -269,7 +270,7 @@ int main(int argc,char *argv[]){
         fclose(fifo_descr_wr); 
         printf("main process finished \n");
         waitpid(childPid,0,0);
-        exit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS); 
     }   
     return 0;
 }
