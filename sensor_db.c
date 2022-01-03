@@ -20,7 +20,7 @@ int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
     int rc = sqlite3_exec(db,statement,0,0,&err_msg);
 
     if(rc != SQLITE_OK){
-        // printf("Failed to fetch data: %s \n",err_msg);
+        DEBUG_PRINTF("Failed to fetch data: %s \n",err_msg);
         char* msg;
         asprintf(&msg,"Failed to fetch data: %s",err_msg);
         sqlite3_free(err_msg);
@@ -65,7 +65,7 @@ DBCONN *init_connection(char clear_up_flag,char* fifo_exit_code,pthread_mutex_t 
     if(rc != SQLITE_OK){
         write_to_logger("Unable to connect to SQL server");
         sqlite3_close(db);
-        exit(EXIT_FAILURE);
+        ERROR_HANDLER(1,"Unalbe to connect to SQL server");
     }
     else{
         char* str = "Connection to SQL server established";
@@ -96,7 +96,7 @@ DBCONN *init_connection(char clear_up_flag,char* fifo_exit_code,pthread_mutex_t 
 void disconnect(DBCONN *conn){
     write_to_logger("Connection to SQL server lost(manually disconnected)");
     write_to_logger(close_fifo_code);
-    sqlite3_close(conn);
+    ERROR_HANDLER(sqlite3_close(conn)!=0,"Failed to close sql3 connection");
     return;
 }
 
