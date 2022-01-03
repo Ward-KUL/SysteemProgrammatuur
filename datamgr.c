@@ -33,7 +33,6 @@ dplist_t* node_list;
 /**
  *  Functions
  */
-
 void* element_copy(void * element);
 void element_free(void ** element);
 int element_compare(void * x, void * y);

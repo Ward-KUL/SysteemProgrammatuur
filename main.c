@@ -51,22 +51,6 @@ sensor_data_t* convert_sensor(sensor_data_packed_t orig){
     return converted;
 }
 
-void write_file(sbuffer_t* buffer){
-    FILE* file = fopen("sensor_data","r");
-    ERROR_HANDLER(file == NULL,"Failed to open sensor_data");
-    sensor_data_packed_t data_formatted;
-    while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,file)>0){
-        sensor_data_t* data = convert_sensor(data_formatted);
-        ERROR_HANDLER(sbuffer_insert(buffer,data)!=SBUFFER_SUCCESS,"Failed to write to buffer");
-        free(data);
-        DEBUG_PRINTF("inserted the following in the buffer:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
-    }
-    fclose(file);
-    ERROR_HANDLER(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS,"Couldn't stop the writing process of the buffer");
-    return;
-}
-
-
 void *tcp_listener_routine(void *arg){
     DEBUG_PRINTF("writer routine called\n");
     argument_thread_t* arguments = arg;
