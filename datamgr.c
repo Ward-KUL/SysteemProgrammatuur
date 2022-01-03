@@ -25,6 +25,9 @@ typedef struct{
     sensor_ts_t last_modified;
 }sensor_node_t;
 
+/**
+ * Global variables
+ */
 dplist_t* node_list;
 
 /**
@@ -40,14 +43,13 @@ void int_free(void** element);
 void* int_copy(void* element);
 int int_compare(void* x, void* y);
 void print_sensor(sensor_data_t* sensor);
-sensor_data_t* convert_packed(sensor_data_packed_t* p);
 void parse_line_to_sensor_node(char* line);
 sensor_node_t* find_sensor_id(sensor_id_t id);
 size_t get_size_of_array(sensor_value_t* array);
 
 void * element_copy(void * element) {
     sensor_data_t* copy = malloc(sizeof (sensor_data_t));
-    assert(copy != NULL);
+    ERROR_HANDLER(copy!=NULL,"Failed to malloc memory");
     copy->id = ((sensor_data_t*)element)->id;
     copy->ts = ((sensor_data_t*)element)->ts;
     copy->value = ((sensor_data_t*)element)->value;
@@ -71,7 +73,7 @@ void int_free(void** element){
 }
 void* int_copy(void* element){
     sensor_data_t* copy = malloc(sizeof(sensor_data_t));
-    assert(copy!=NULL);
+    ERROR_HANDLER(copy!=NULL,"Failed to malloc memory");
     return (void*) copy;
 }
 
@@ -102,7 +104,7 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
             sum += node->average_data->run_avg[i];
         }
         sum = sum/RUN_AVG_LENGTH;
-        printf("Average is %f\n",sum);
+        DEBUG_PRINTF("DATAMANAGER: Calculated average is %f\n",sum);
         char* buffer;
         if(SET_MAX_TEMP < sum){
             asprintf(&buffer,"The sensor node with %d reports it's too hot(running avg temperature = %f)",node->id_sensor,sum);
@@ -126,8 +128,7 @@ size_t get_size_of_array(sensor_value_t* array){
             return i;
         }
     }
-    
-    return (RUN_AVG_LENGTH);
+    return RUN_AVG_LENGTH;
 }
 
 average_data_t* get_default_avg(){
@@ -143,8 +144,7 @@ average_data_t* get_default_avg(){
 int datamgr_add_new_sensor_data(sensor_data_packed_t data){
     sensor_node_t* sensor = find_sensor_id(data.id);
     if(sensor == NULL){
-        //sensor was not found
-        printf("Sensor was not found\n");
+        DEBUG_PRINTF("Sensor was is not present\n");
         return -1;
     }
     add_new_measurement_to_average(sensor,data.value);
@@ -220,16 +220,4 @@ sensor_node_t* find_sensor_id(sensor_id_t id){
     return NULL;
 }
 
-void print_sensor(sensor_data_t* sensor){
-    printf("The sensor contains: id = %d, value = %f, timestamp = %ld (print statement was written on line) %d\n",sensor->id,sensor->value,sensor->ts,__LINE__);
-    return;
-}
-
-sensor_data_t* convert_packed(sensor_data_packed_t* p){
-    sensor_data_t* d = malloc(sizeof(sensor_data_t));
-    d->id = p->id;
-    d->ts = p->ts;
-    d->value = p->value;
-    return d;
-}
 
