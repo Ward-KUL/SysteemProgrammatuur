@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -99,6 +101,10 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
         sum = sum/RUN_AVG_LENGTH;
         if((SET_MAX_TEMP < sum) || (sum < SET_MIN_TEMP)){
             //running avgerage is not what we want anymore
+            char* buffer;
+            asprintf(&buffer,"The running average of room: %d sensor_id: %d is out of bounds and is %f. Should be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
+            write_to_logger(buffer);
+            free(buffer);
             fprintf(stderr,"LET WEL OP: IN DE VORIGE LABTOOLS MOESTEN MAX EN MIN EEN percent f zijn.\nThe running average of room: %d sensor_id: %d is out of bounds and is %f. Should be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
         }
         node->average_data->previous_avg = sum;
@@ -131,6 +137,7 @@ int datamgr_add_new_sensor_data(sensor_data_packed_t data){
     sensor_node_t* sensor = find_sensor_id(data.id);
     if(sensor == NULL){
         //sensor was not found
+        printf("Sensor was not found\n");
         return -1;
     }
     add_new_measurement_to_average(sensor,data.value);
@@ -200,6 +207,7 @@ sensor_node_t* find_sensor_id(sensor_id_t id){
     int size = dpl_size(node_list);
     while(index<size){
         sensor_node_t* data = dpl_get_element_at_index(node_list,index);
+        printf("Data id is %d\n",data->id_sensor);
         if(data->id_sensor == id) return data;
         index ++;
     }
