@@ -30,4 +30,7 @@ typedef struct {
     sensor_ts_t ts __attribute__((packed));    /** < sensor timestamp */
 } sensor_data_packed_t;
 
+
+void write_to_logger(char* to_write);
+
 #endif /* _CONFIG_H_ */

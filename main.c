@@ -24,8 +24,25 @@ typedef struct sbuffer_node {
 } sbuffer_node_t;
 
 char* fifo_exit_code = "Close fifo code: 1@3ks93k4j32";
-char* fifo_path = "fifo_patH";
 pthread_mutex_t lock;
+FILE* fifo_descr_wr = NULL;
+
+
+void write_to_logger(char* to_write){
+    if(fifo_descr_wr == NULL){
+        printf("Couldn't write to fifo because pointer is NULL\n");
+        exit(EXIT_FAILURE);
+    }
+    char *send_buf;
+    asprintf(&send_buf,"%s\n",to_write);
+    // pthread_mutex_lock(&lock);
+    if(fputs(send_buf,fifo_descr_wr) == EOF){
+        printf("Failed to write to fifo\n");
+    }
+    // pthread_mutex_unlock(&lock);
+    printf("Tried to write the following to the logger %s",send_buf);
+    free(send_buf);
+}
 
 sensor_data_t* convert_sensor(sensor_data_packed_t orig){
     sensor_data_t* converted = malloc(sizeof(sensor_data_t));
@@ -69,7 +86,7 @@ void *writer_start_routine(void *arg){
 void *slow_reader_routine(void *arg){
     //start the db
     printf("slow routine called\n");
-    DBCONN* conn = init_connection(1,fifo_path,fifo_exit_code,lock);
+    DBCONN* conn = init_connection(1,fifo_exit_code,lock);
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     *node = NULL;
@@ -165,18 +182,14 @@ void start_threads(){
     // free(reader_slow_result);
 }
 
-void start_logger(){
+void start_logger(FILE* fifo){
+    printf("Logger started\n");
     int log_count = 0;
     int MAX_BUFFER_SIZE = 150;
     char receive_buffer[MAX_BUFFER_SIZE];//set in header file with define
     char* str_result = NULL;
     time_t time_v;
     FILE* gateway = fopen("gateway.log","w");
-    FILE* fifo = fopen(fifo_path,"r");
-    if(fifo == NULL){
-        printf("Couldn't open the fifo");
-        exit(EXIT_FAILURE);
-    }
     do{       
         // pthread_mutex_lock(&mutex_lock);
         str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo);
@@ -186,11 +199,14 @@ void start_logger(){
             //received something
             str_result[strcspn(str_result, "\n")] = 0;//haal de newline character van str_result
             time(&time_v);//set timer variable to current time
-            fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result);
+            if(fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result)< 0){
+                printf("Couldn't write to the gateway log file but we did receive something\n");
+                exit(EXIT_FAILURE);
+            }
             log_count++;
         }
     }
-    while(/*strcmp(str_result,fifo_exit_code) != 0*/1);
+    while(strcmp(str_result,fifo_exit_code) != 0);
     printf("logger closes\n");
     //done receiving, close everything
     if(fclose(fifo) != 0){
@@ -201,29 +217,79 @@ void start_logger(){
 }
 
 int main(void){
-    if(mkfifo(fifo_path,0666)!= 0){
+
+    char* fifo_path = "path_to_fifo";
+    if(mkfifo(fifo_path,0666) != 0){
         if(errno != EEXIST){
             printf("Failed to create fifo and it doesn't exist already either\n");
             exit(EXIT_FAILURE);
         }
-        else{
-            printf("fifo didn't need to be created since it already existed\n");
-        }
     }
-    //mutex_lock is globally defined
-    pthread_mutex_init(&lock,NULL);
-
     pid_t childPid = fork();
     if(childPid == 0){
-        //child process -> start the logger
-        start_logger();
+        //child process
+        fifo_descr_wr = fopen(fifo_path,"w");
+        if(fifo_descr_wr == NULL){
+            printf("Failed to open the fifo to write data to it\n");
+            exit(EXIT_FAILURE);
+        }
+        write_to_logger("mama mia");
+        write_to_logger("hallo pizzeria");
+        write_to_logger("momma spaghetti");
+        write_to_logger(fifo_exit_code);
+
     }
     else{
-        //parent process -> start the threads
-        start_threads();
+        //parent
+        FILE* fifo = fopen(fifo_path,"r");
+        if(fifo == NULL){
+            printf("Failed to open the fifo to write data to it\n");
+            exit(EXIT_FAILURE);
+        }
+        start_logger(fifo);
+
     }
-    int exit_code;
-    waitpid(childPid,&exit_code,0);
-    printf("Everything synced up and closing");    
+
+
+
+
+
+
+    // char* fifo_path = "fifo_path";
+    // if(mkfifo(fifo_path,0666)!= 0){
+    //     if(errno != EEXIST){
+    //         printf("Failed to create fifo and it doesn't exist already either\n");
+    //         exit(EXIT_FAILURE);
+    //     }
+    //     else{
+    //         printf("fifo didn't need to be created since it already existed\n");
+    //     }
+    // }
+    // //mutex_lock is globally defined
+    // pthread_mutex_init(&lock,NULL);
+
+    // pid_t childPid = fork();
+    // if(childPid == 0){
+    //     //child process -> start the logger
+    //     FILE* fifo_read = fopen(fifo_path,"r");
+    //     if(fifo_read == NULL){
+    //         printf("Couldn't open the fifo to read from it\n");
+    //         exit(EXIT_FAILURE);
+    //     }
+    //     start_logger(fifo_read);
+    // }
+    // else{
+    //     //parent process -> start the threads
+    //     fifo_descr_wr = fopen(fifo_path,"w");
+    //     if( fifo_descr_wr == NULL){
+    //         printf("Couldn't open the fifo to write to it\n");
+    //         exit(EXIT_FAILURE);
+    //     }
+    //     write_to_logger("plz man");
+    //     start_threads();
+    // }
+    // int exit_code;
+    // waitpid(childPid,&exit_code,0);
+    // printf("Everything synced up and closing");    
     return 0;
 }
