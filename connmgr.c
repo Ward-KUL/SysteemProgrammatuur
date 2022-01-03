@@ -16,7 +16,9 @@
 #include "sbuffer.h"
 #include <unistd.h>
 
-
+/**
+ * container object that contains info about a tcp connection
+ */
 struct active_connection{
     tcpsock_t* socket;//contains the tcp socket 
     time_t ts;//contains the last timestamp

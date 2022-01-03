@@ -16,13 +16,18 @@
 #include <sys/wait.h>
 #include "connmgr.h"
 
-
+/**
+ * container object that gives arguments to the thread routines
+ */
 typedef struct argument_thread{
     sbuffer_t* buffer;
     int port_nr;
+    char* fifo_exit_code;
 }argument_thread_t;
 
-char* fifo_exit_code = "Close fifo code: 1@3ks93k4j32";
+/**
+ * Global variables
+ */
 pthread_mutex_t lock;
 FILE* fifo_descr_wr = NULL;
 
@@ -68,13 +73,14 @@ void *tcp_listener_routine(void *arg){
     sbuffer_t* buffer = arguments->buffer;
     connmgr_listen(arguments->port_nr,buffer);
     connmgr_free();
+    write_to_logger(arguments->fifo_exit_code);
     return NULL;
 }
 
 
 void *database_reader_routine(void *arg){
     DEBUG_PRINTF("slow routine called\n");
-    DBCONN* conn = init_connection(1,fifo_exit_code,lock);
+    DBCONN* conn = init_connection(1);
     ERROR_HANDLER(conn == NULL,"Failed to open the database");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
@@ -145,7 +151,7 @@ void *datamgr_reader_routine(void *arg){
     return NULL;
 }
 
-void start_threads(int port_nr){
+void start_threads(int port_nr,char* fifo_exit_code){
     printf("Trying to start threads\n");
     pthread_t writer,reader_slow,reader_fast;
     argument_thread_t* arguments = malloc(sizeof(argument_thread_t));
@@ -153,6 +159,7 @@ void start_threads(int port_nr){
     ERROR_HANDLER(sbuffer_init(&buffer) != 0,"failed to initialize the buffer");
     arguments->buffer = buffer;
     arguments->port_nr = port_nr;
+    arguments->fifo_exit_code = fifo_exit_code;
 
     ERROR_HANDLER(pthread_create(&writer,NULL,tcp_listener_routine,arguments)!=0,"Failed to create thread");
     ERROR_HANDLER(pthread_create(&reader_slow,NULL,database_reader_routine,arguments)!=0,"Failed to create thread");
@@ -164,7 +171,7 @@ void start_threads(int port_nr){
     free(arguments);
 }
 
-void start_logger(FILE* fifo){
+void start_logger(FILE* fifo,char* fifo_exit_code){
     DEBUG_PRINTF("Logger started\n");
     int log_count = 0;
     int MAX_BUFFER_SIZE = 150;
@@ -204,7 +211,8 @@ int main(int argc,char *argv[]){
     //mutex lock is globally defined
     pthread_mutex_init(&lock,NULL);
 
-    char* fifo_path = "path_to_fifo";
+    char* fifo_exit_code = "Close fifo code: 1@3ks93k4j32";
+    char* fifo_path = "logFifo";
     if(mkfifo(fifo_path,0666) != 0){
         ERROR_HANDLER(errno != EEXIST,"Failed to create fifo and it doesn't exist already either");
     }
@@ -213,13 +221,13 @@ int main(int argc,char *argv[]){
         //child process
         FILE* fifo = fopen(fifo_path,"r");
         ERROR_HANDLER(fifo == NULL,"Failed to open the fifo to write data to it\n");
-        start_logger(fifo);
+        start_logger(fifo,fifo_exit_code);
     }
     else{
         //parent
         fifo_descr_wr = fopen(fifo_path,"w");
         ERROR_HANDLER(fifo_descr_wr == NULL,"Failed to open the fifo to write data to it\n");
-        start_threads(port_nr);   
+        start_threads(port_nr,fifo_exit_code);   
         fclose(fifo_descr_wr); 
         DEBUG_PRINTF("main process finished \n");
         waitpid(childPid,0,0);

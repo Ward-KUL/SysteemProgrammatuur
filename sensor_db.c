@@ -12,9 +12,6 @@
 #include <pthread.h>    
 
 
-char* close_fifo_code;
-pthread_mutex_t lock;
-
 int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
     char* err_msg = 0;
     int rc = sqlite3_exec(db,statement,0,0,&err_msg);
@@ -53,13 +50,10 @@ int get_result_of_querry(DBCONN* conn,char* querry,callback_t f){
 
 
 
-DBCONN *init_connection(char clear_up_flag,char* fifo_exit_code,pthread_mutex_t lock_object){
+DBCONN *init_connection(char clear_up_flag){
 
     DBCONN *db = NULL;
-    close_fifo_code = fifo_exit_code;
-    
-    lock = lock_object;
-    
+        
     int rc = sqlite3_open(TO_STRING(DB_NAME),&db);
 
     if(rc != SQLITE_OK){
@@ -95,7 +89,6 @@ DBCONN *init_connection(char clear_up_flag,char* fifo_exit_code,pthread_mutex_t 
 
 void disconnect(DBCONN *conn){
     write_to_logger("Connection to SQL server lost(manually disconnected)");
-    write_to_logger(close_fifo_code);
     ERROR_HANDLER(sqlite3_close(conn)!=0,"Failed to close sql3 connection");
     return;
 }
