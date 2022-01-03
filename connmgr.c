@@ -3,6 +3,7 @@
  */
 
 #define _DEFAULT_SOURCE//for usleep
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,17 +14,14 @@
 #include "lib/dplist.h"
 #include <poll.h>
 #include <stdbool.h>
-// #include <stropts.h>
 #include "sbuffer.h"
 #include <unistd.h>
-
-
-
 
 
 struct active_connection{
     tcpsock_t* socket;//contains the tcp socket 
     time_t ts;//contains the last timestamp
+    sensor_id_t id;
 };
 
 /**
@@ -41,7 +39,7 @@ struct tcpsock{
 
 void free_tcp(void** tcp){
     active_connection_t* conn = (active_connection_t*)(*tcp);
-    //free(conn->socket); the socket is freeed automatically
+    //free(conn->socket); the socket is freed automatically
     free(conn);
 }
 
@@ -76,7 +74,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
 
     FILE* file = fopen("sensor_data_recv","w");  
 
-    printf("Test server has started\n");
+    write_to_logger("Test server has started");
     if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     active_connection_t* server_conn = get_conn(server);
     dpl_insert_at_index(tcp_list,server_conn,99,false);
@@ -97,7 +95,10 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             time_t timer;
             time(&timer);
             if((timer - conn->ts) > TIMEOUT){
-                printf("Connection timed out \n");
+                char* buffer;
+                asprintf(&buffer,"The sensor node with id: %d has timed out",conn->id);
+                write_to_logger(buffer);
+                free(buffer);
                 //the connection has timed out
                 tcp_close(&(conn->socket));
                 dpl_remove_at_index(tcp_list,i,true);
@@ -117,7 +118,6 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                     if(x == 0){
                         //er is iets op de server gebeurd(een nieuwe connectie)
                         if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
-                        printf("Incoming client connection\n");
                         dpl_insert_at_index(tcp_list,get_conn(client),99,false);
                     }
                     else{
@@ -136,20 +136,31 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                             bytes = sizeof(data.ts);
                             result = tcp_receive(client, (void *) &data.ts, &bytes);
                             if ((result == TCP_NO_ERROR) && bytes) {
-                                // fprintf(file,"sensor id = %" PRIu16 " - temperature = %g - timestamp = %ld\n", data.id, data.value,
-                                //     (long int) data.ts);
                                 sbuffer_insert(buffer,&data);
                             }
                             //received a complete package from a sensor -> let's listen for other sensors
+                            if(client_conn->id == 0){
+                                client_conn->id = data.id;
+                                char* buffer;
+                                asprintf(&buffer,"A sensor with id: %d has opened a new connection",data.id);
+                                write_to_logger(buffer);
+                                free(buffer);
+                            }
                             break;
                         } while (result == TCP_NO_ERROR);
                         if(result != TCP_NO_ERROR){
                             //the connection should be broken off
                             if (result == TCP_CONNECTION_CLOSED){
-                                printf("Peer has closed connection\n");
+                                char* buffer;
+                                asprintf(&buffer,"The sensor node with id: %d has closed the connection",client_conn->id);
+                                write_to_logger(buffer);
+                                free(buffer);
                             }
                             else{
-                                printf("Error occured on connection to peer\n");
+                                char* buffer;
+                                asprintf(&buffer,"An error occured on sensor node with id: %d",client_conn->id);
+                                write_to_logger(buffer);
+                                free(buffer);
                             }
                             //remove client from the list of active clients
                             tcp_close(&(client_conn->socket));
@@ -161,13 +172,13 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             }
         }
         else if(ret == 0){
-            printf("Server timed out\n");
+            write_to_logger("Server timed out");
             break;
         }
         usleep(100);
     } while (server_running);//keep it running
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
-    printf("Test server is shutting down\n");
+    write_to_logger("Test server is shutting down");
     dpl_free(&tcp_list,true);
     fclose(file);
     sbuffer_done_writing(buffer);

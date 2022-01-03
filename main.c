@@ -36,16 +36,11 @@ void write_to_logger(char* to_write){
     }
     char *send_buf;
     asprintf(&send_buf,"%s\n",to_write);
-    printf("Locking\n");
-    fflush(stdout);
     pthread_mutex_lock(&lock);
     if(fputs(send_buf,fifo_descr_wr) == EOF){
         printf("Failed to write to fifo\n");
     }
-    pthread_mutex_unlock(&lock);
-    printf("Unlocking\n");
-    fflush(stdout);
-    
+    pthread_mutex_unlock(&lock);    
     free(send_buf);
 }
 
@@ -200,7 +195,6 @@ void start_logger(FILE* fifo){
         str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo);
         pthread_mutex_unlock(&lock);
         if(str_result != NULL){
-             printf("Received the following : %s",str_result);
             //received something
             str_result[strcspn(str_result, "\n")] = 0;//haal de newline character van str_result
             time(&time_v);//set timer variable to current time
