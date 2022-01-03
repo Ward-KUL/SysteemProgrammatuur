@@ -14,6 +14,10 @@ typedef time_t sensor_ts_t;         // UTC timestamp as returned by time() - not
 typedef struct mutex_data mutex_data_t;
 typedef uint16_t room_id_t;
 
+
+/**
+ * structure to hold sensor data
+ */
 typedef struct {
     sensor_id_t id;
     sensor_value_t value;
@@ -22,7 +26,7 @@ typedef struct {
 
 
 /**
- * structure to hold sensor data_packed
+ * structure to hold sensor data in packed format
  */
 typedef struct {
     sensor_id_t id __attribute__((packed));         /** < sensor id */

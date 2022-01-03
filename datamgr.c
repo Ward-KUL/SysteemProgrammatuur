@@ -27,6 +27,9 @@ typedef struct{
 
 dplist_t* node_list;
 
+/**
+ *  Functions
+ */
 
 void* element_copy(void * element);
 void element_free(void ** element);
@@ -91,7 +94,7 @@ int node_compare(void * x, void * y) {
 void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value){
     node->average_data->run_avg[node->average_data->lastPos] = new_value;
     node->average_data->lastPos ++;
-    if(node->average_data->lastPos>=RUN_AVG_LENGTH) node->average_data->lastPos =0; //overflow
+    if(node->average_data->lastPos>=RUN_AVG_LENGTH) node->average_data->lastPos =0; //overflow, go to the first element
     if(get_size_of_array(node->average_data->run_avg) >= RUN_AVG_LENGTH){    
         //calculate run_avg
         sensor_value_t sum = 0;
@@ -132,7 +135,7 @@ average_data_t* get_default_avg(){
     average_data->lastPos = 0;
     average_data->previous_avg = 0;
     for(int i = 0;i<RUN_AVG_LENGTH;i++){
-        average_data->run_avg[i] = -274; //lowest possible temperature which should not be recorded
+        average_data->run_avg[i] = -274; //default is the lowest possible temperature which will not be recorded
     }
     return average_data;
 }
@@ -152,10 +155,10 @@ int datamgr_add_new_sensor_data(sensor_data_packed_t data){
 
 void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
 
-    if(node_list != NULL) datamgr_free();//als er nog sensors in de lijst zitten eerst de lijst freeen zodat we geen memory leaks hebben
+    if(node_list != NULL) datamgr_free();
     //intialize the list
     node_list = dpl_create(NULL,node_free,node_compare);
-    //create the list with the sensors
+    //create the list with the sensor nodes
     sensor_node_t* node = malloc(sizeof(sensor_node_t));
     while(fscanf(fp_sensor_map,"%hi %hi",&(node->id_room),&(node->id_sensor))>0){
         node->average_data = get_default_avg();
@@ -165,7 +168,7 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     }
     free(node);
     
-    //create the list with the data from the sensors
+    //add recorded data to the sensor nodes
     if(fp_sensor_data != NULL){
         sensor_data_packed_t data_formatted;
         while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
@@ -205,7 +208,7 @@ int datamgr_get_total_sensors(){
     return dpl_size(node_list);
 }
 
-//function that returns the sensor with the corresponding id from the internal list, returns NULL of sensor not found
+//function that returns the sensor with the corresponding id from the internal list, returns NULL if sensor not found
 sensor_node_t* find_sensor_id(sensor_id_t id){
     int index = 0;
     int size = dpl_size(node_list);

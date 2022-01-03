@@ -21,7 +21,7 @@
 struct active_connection{
     tcpsock_t* socket;//contains the tcp socket 
     time_t ts;//contains the last timestamp
-    sensor_id_t id;
+    sensor_id_t id;//contains the sensor id
 };
 
 /**
@@ -39,7 +39,7 @@ struct tcpsock{
 
 void free_tcp(void** tcp){
     active_connection_t* conn = (active_connection_t*)(*tcp);
-    //free(conn->socket); the socket is freed automatically
+    //the socket is freed automatically
     free(conn);
 }
 
@@ -48,12 +48,10 @@ active_connection_t* get_conn(tcpsock_t* sock){
     active_connection_t* conn = malloc(sizeof(active_connection_t));
     conn->socket = sock;
     time(&(conn->ts));
+    conn->id = 0;
     return conn;
 }
 
-/**
- * Implements a sequential test server (only one connection at the same time)
- */
 
 //global variables
 bool server_running = false;
@@ -107,7 +105,10 @@ int receive_via_tcp(active_connection_t* client_conn,sbuffer_t* buffer){
         return result;
     }
     check_if_first_connection(client_conn,data.id);
-    sbuffer_insert(buffer,&data);
+    if(sbuffer_insert(buffer,&data)!=SBUFFER_SUCCESS){
+        write_to_logger("Failed to insert data in the buffer");
+        exit(EXIT_FAILURE);
+    }
     return TCP_NO_ERROR;
 }
 
@@ -115,7 +116,7 @@ void receive_from_client(active_connection_t* client_conn,dplist_t* tcp_list,sbu
     time(&(client_conn->ts));
     int result = receive_via_tcp(client_conn,buffer);
     if(result != TCP_NO_ERROR){
-        //the connection should be broken off
+        //the connection is no longer valid
         if (result == TCP_CONNECTION_CLOSED){
             char* buffer;
             asprintf(&buffer,"The sensor node with id: %d has closed the connection",client_conn->id);
@@ -140,15 +141,15 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
     tcpsock_t *server, *client;
     int conn_counter = 0;
     dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); 
-
-    FILE* file = fopen("sensor_data_recv","w");  
-
     write_to_logger("Test server has started");
-    if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR) exit(EXIT_FAILURE);
+    if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR){
+        write_to_logger("Couldn't open the tcp_listener on the requested port");
+        exit(EXIT_FAILURE);
+    } 
     active_connection_t* server_conn = get_conn(server);
     dpl_insert_at_index(tcp_list,server_conn,99,false);
     do {
-        //poll for connections
+        //create the pollfd with the descriptors of the to poll i/o connections
         conn_counter = dpl_size(tcp_list);
         struct pollfd fds[conn_counter];
         for(int i = 0;i<conn_counter;i++){
@@ -158,7 +159,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             fds[i].events = POLLIN;
         }
         int ret = poll(fds,conn_counter,TIMEOUT*1000);
-        //check for timeouts before continuing
+        //remove the timed out connections
         for(int i = 1; i<conn_counter;i++){ //and skip the server
             active_connection_t* conn = dpl_get_element_at_index(tcp_list,i);
             time_t timer;
@@ -171,13 +172,13 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                 //the connection has timed out
                 tcp_close(&(conn->socket));
                 dpl_remove_at_index(tcp_list,i,true);
-                //remove the result from the polling as well
+                //remove the result list of connections to poll
                 fds[i].revents = 0;
                 fds[i].fd = -1;
                 fds[i].events = 0;
             }
         }
-        //something has happened -> check which device
+        //something has happened -> check which connection
         if(ret>0){
             for(int x = 0;x<conn_counter;x++){
                 if(fds[x].revents & POLLIN){
@@ -185,7 +186,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                     fds[x].events = 0;
                     fds[x].fd = -1;
                     if(x == 0){
-                        //er is iets op de server gebeurd(een nieuwe connectie)
+                        //new connection
                         if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
                         dpl_insert_at_index(tcp_list,get_conn(client),99,false);
                     }
@@ -193,11 +194,8 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                         //receive from client
                         active_connection_t* client_conn = dpl_get_element_at_index(tcp_list,x);
                         receive_from_client(client_conn,tcp_list,buffer);
-                        //     break;
-                        // } while (result == TCP_NO_ERROR); 
                     }
                 }
-                
             }
         }
         else if(ret == 0){
@@ -205,11 +203,10 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             break;
         }
         usleep(100);
-    } while (server_running);//keep it running
+    } while (server_running);//keep tcp_listener running while the flag is high
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     write_to_logger("Test server is shutting down");
     dpl_free(&tcp_list,true);
-    fclose(file);
     sbuffer_done_writing(buffer);
 }
 
