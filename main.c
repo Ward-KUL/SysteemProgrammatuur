@@ -29,18 +29,23 @@ FILE* fifo_descr_wr = NULL;
 
 
 void write_to_logger(char* to_write){
+    printf("Tried to write the following to the logger %s\n",to_write);
     if(fifo_descr_wr == NULL){
         printf("Couldn't write to fifo because pointer is NULL\n");
         exit(EXIT_FAILURE);
     }
     char *send_buf;
     asprintf(&send_buf,"%s\n",to_write);
-    // pthread_mutex_lock(&lock);
+    printf("Locking\n");
+    fflush(stdout);
+    pthread_mutex_lock(&lock);
     if(fputs(send_buf,fifo_descr_wr) == EOF){
         printf("Failed to write to fifo\n");
     }
-    // pthread_mutex_unlock(&lock);
-    printf("Tried to write the following to the logger %s",send_buf);
+    pthread_mutex_unlock(&lock);
+    printf("Unlocking\n");
+    fflush(stdout);
+    
     free(send_buf);
 }
 
@@ -191,9 +196,9 @@ void start_logger(FILE* fifo){
     time_t time_v;
     FILE* gateway = fopen("gateway.log","w");
     do{       
-        // pthread_mutex_lock(&mutex_lock);
+        pthread_mutex_lock(&lock);
         str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo);
-        // pthread_mutex_unlock(&mutex_lock);
+        pthread_mutex_unlock(&lock);
         if(str_result != NULL){
              printf("Received the following : %s",str_result);
             //received something
@@ -220,6 +225,9 @@ void start_logger(FILE* fifo){
 }
 
 int main(void){
+
+    //mutex lock is globally defined
+    pthread_mutex_init(&lock,NULL);
 
     char* fifo_path = "path_to_fifo";
     if(mkfifo(fifo_path,0666) != 0){

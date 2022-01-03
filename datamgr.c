@@ -102,20 +102,15 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
         char* buffer;
         if(SET_MAX_TEMP < sum){
             asprintf(&buffer,"The sensor node with %d reports it's too hot(running avg temperature = %f)",node->id_sensor,sum);
+            write_to_logger(buffer);
+            free(buffer);
         }
         else if(sum < SET_MIN_TEMP){
             asprintf(&buffer,"The sensor node with %d reports it's too cold(running avg temperature = %f)",node->id_sensor,sum);
+            write_to_logger(buffer);
+            free(buffer);
         }
-        write_to_logger(buffer);
-        free(buffer);
-        // if((SET_MAX_TEMP < sum) || (sum < SET_MIN_TEMP)){
-        //     //running avgerage is not what we want anymore
-        //     char* buffer;
-        //     asprintf(&buffer,"The running average of room: %d sensor_id: %d is out of bounds and is %f. Should be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
-        //     write_to_logger(buffer);
-        //     free(buffer);
-        //     fprintf(stderr,"LET WEL OP: IN DE VORIGE LABTOOLS MOESTEN MAX EN MIN EEN percent f zijn.\nThe running average of room: %d sensor_id: %d is out of bounds and is %f. Should be between max:%d and min:%d\n",node->id_room,node->id_sensor,sum,SET_MAX_TEMP,SET_MIN_TEMP);
-        // }
+        printf("Average is %f \n",sum);
         node->average_data->previous_avg = sum;
     }
 }
