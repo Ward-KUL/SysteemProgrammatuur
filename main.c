@@ -150,7 +150,7 @@ void *fast_reader_routine(void *arg){
             data_packed->ts = data->ts;
             data_packed->value = data->value;
             datamgr_add_new_sensor_data(*data_packed);
-            printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
+            // printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
         usleep(10);
