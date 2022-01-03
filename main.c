@@ -213,7 +213,10 @@ void start_logger(FILE* fifo){
         printf("Logger couldn't close fifo\n");
     }
     fclose(gateway);
+    waitpid(getppid(),0,0);
+    printf("Everything synced up and closed\n");
     exit(EXIT_SUCCESS);
+
 }
 
 int main(void){
@@ -234,6 +237,7 @@ int main(void){
             exit(EXIT_FAILURE);
         }
         start_logger(fifo);
+        printf("logging process finished\n");
     }
     else{
         //parent
@@ -243,10 +247,12 @@ int main(void){
             exit(EXIT_FAILURE);
         }
         start_threads();    
+        printf("main process finished \n");
+        exit(EXIT_SUCCESS);
     }
     // int returncode;
     // waitpid(childPid,&returncode,0);
-    printf("Everything synced up and closed\n");
+    
 
 
 
