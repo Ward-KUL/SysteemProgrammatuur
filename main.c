@@ -54,7 +54,7 @@ void write_file(sbuffer_t* buffer){
         sensor_data_t* data = convert_sensor(data_formatted);
         ERROR_HANDLER(sbuffer_insert(buffer,data)!=SBUFFER_SUCCESS,"Failed to write to buffer");
         free(data);
-        // DEBUG_PRINTF("inserted the following in the buffer:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
+        DEBUG_PRINTF("inserted the following in the buffer:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
     }
     fclose(file);
     ERROR_HANDLER(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS,"Couldn't stop the writing process of the buffer");
@@ -172,6 +172,7 @@ void start_logger(FILE* fifo){
     char* str_result = NULL;
     time_t time_v;
     FILE* gateway = fopen("gateway.log","w");
+    ERROR_HANDLER(gateway == NULL, "Failed to open gateway.log");
     do{       
         pthread_mutex_lock(&lock);
         str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo);
@@ -185,13 +186,10 @@ void start_logger(FILE* fifo){
         }
     }
     while(strcmp(str_result,fifo_exit_code) != 0);
-    printf("logger closes\n");
-    //done receiving, close everything
-    if(fclose(fifo) != 0){
-        printf("Logger couldn't close fifo\n");
-    }
-    fclose(gateway);
-    printf("Everything synced up and closed\n");
+    DEBUG_PRINTF("logger closes\n");
+    ERROR_HANDLER(fclose(fifo) != 0,"Logger couldn't close fifo");
+    ERROR_HANDLER(fclose(gateway)!=0,"Logger couldn't close gateway");
+    DEBUG_PRINTF("Everything synced up and closed\n");
     exit(EXIT_SUCCESS);
 
 }
