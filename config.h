@@ -24,7 +24,7 @@ typedef uint16_t room_id_t;
 #ifdef DEBUG
 #define DEBUG_PRINTF(...)                           \
             do{                                                                          \
-            fprintf(stderr,"\nIn %s - function %s at line %d: ", __FILE__, __func__, __LINE__);     \
+            fprintf(stderr,"DEBUG INFO:\nIn %s - function %s at line %d: ", __FILE__, __func__, __LINE__);     \
             fprintf(stderr,__VA_ARGS__);                                                \
             fflush(stderr);                                                             \
             }while(0)                      

@@ -1,4 +1,3 @@
-#define _DEFAULT_SOURCE//for usleep
 #define _GNU_SOURCE
 
 #include "sbuffer.h"
@@ -17,11 +16,6 @@
 #include <sys/wait.h>
 #include "connmgr.h"
 
-typedef struct sbuffer_node {
-    struct sbuffer_node *next;  /**< a pointer to the next node*/
-    sensor_data_t data;         /**< a structure containing the data */
-    bool has_been_read;         /** boolean that will be set to true once the data has been written*/
-} sbuffer_node_t;
 
 typedef struct argument_thread{
     sbuffer_t* buffer;
@@ -34,17 +28,12 @@ FILE* fifo_descr_wr = NULL;
 
 
 void write_to_logger(char* to_write){
-    printf("LOGGER: %s\n",to_write);
-    if(fifo_descr_wr == NULL){
-        printf("Couldn't write to fifo because pointer is NULL\n");
-        exit(EXIT_FAILURE); 
-    }
+    DEBUG_PRINTF("LOGGER: %s\n",to_write);
+    ERROR_HANDLER(fifo_descr_wr == NULL, "Couldn't write to fifo because pointer is NULL");
     char *send_buf;
     asprintf(&send_buf,"%s\n",to_write);
     pthread_mutex_lock(&lock);
-    if(fputs(send_buf,fifo_descr_wr) == EOF){
-        printf("Failed to write to fifo\n");
-    }
+    ERROR_HANDLER(fputs(send_buf,fifo_descr_wr) == EOF,"Failed to write to fifo");
     pthread_mutex_unlock(&lock);    
     free(send_buf);
 }
@@ -59,40 +48,34 @@ sensor_data_t* convert_sensor(sensor_data_packed_t orig){
 
 void write_file(sbuffer_t* buffer){
     FILE* file = fopen("sensor_data","r");
+    ERROR_HANDLER(file == NULL,"Failed to open sensor_data");
     sensor_data_packed_t data_formatted;
     while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,file)>0){
         sensor_data_t* data = convert_sensor(data_formatted);
-        sbuffer_insert(buffer,data);
+        ERROR_HANDLER(sbuffer_insert(buffer,data)!=SBUFFER_SUCCESS,"Failed to write to buffer");
         free(data);
-        // printf("writer: data is:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
-
+        DEBUG_PRINTF("inserted the following in the buffer:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
     }
     fclose(file);
-    if(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS){
-        printf("Couldn't stop the writing process of the buffer\n");
-        return;
-        
-    }
+    ERROR_HANDLER(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS,"Couldn't stop the writing process of the buffer");
     return;
 }
 
 
-
-void *writer_start_routine(void *arg){
-    printf("writer routine called\n");
+void *tcp_listener_routine(void *arg){
+    DEBUG_PRINTF("writer routine called\n");
     argument_thread_t* arguments = arg;
     sbuffer_t* buffer = arguments->buffer;
-    //start tcp_listener
     connmgr_listen(arguments->port_nr,buffer);
     connmgr_free();
     return NULL;
 }
 
 
-void *slow_reader_routine(void *arg){
-    //start the db
-    printf("slow routine called\n");
+void *database_reader_routine(void *arg){
+    DEBUG_PRINTF("slow routine called\n");
     DBCONN* conn = init_connection(1,fifo_exit_code,lock);
+    ERROR_HANDLER(conn == NULL,"Failed to open the database");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sbuffer_node_t** node = malloc(sizeof(sbuffer_node_t*));
     *node = NULL;
@@ -102,30 +85,27 @@ void *slow_reader_routine(void *arg){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                if(sbuffer_is_buffer_done_writing(buffer) == false)
-                    usleep(100000);//sleep for 10 ms
-                else{//there won't be anymore data added
+                if(sbuffer_is_buffer_done_writing(buffer) == true){
+                    //there won't be anymore data added
                     free(node);
                     free(data);
                     break;
                 }
             }
             else
-                printf("Failure reading from buffer\n");
+                DEBUG_PRINTF("Failure reading from buffer\n");
         }
         else{
-            insert_sensor(conn,data->id,data->value,data->ts);
-            // printf("reader 1: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
-
+            ERROR_HANDLER(insert_sensor(conn,data->id,data->value,data->ts)!=0,"Failed to insert new record");
+            DEBUG_PRINTF("database inserted the following data:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
         }
-        usleep(100);
     }
     disconnect(conn);
-    printf("Database is done reading\n");
+    DEBUG_PRINTF("Database is done reading\n");
     return NULL;
 }
 
-void *fast_reader_routine(void *arg){
+void *datamgr_reader_routine(void *arg){
     printf("fast routine called\n");
     sensor_data_t* data = malloc(sizeof(sensor_data_t));
     sensor_data_packed_t* data_packed = malloc(sizeof(sensor_data_packed_t));
@@ -135,15 +115,14 @@ void *fast_reader_routine(void *arg){
     sbuffer_t* buffer = arguments->buffer;
 
     FILE* sensor_map = fopen("room_sensor.map","r");
+    ERROR_HANDLER(sensor_map == NULL,"Failed to open room_sensor.map");
     datamgr_parse_sensor_files(sensor_map,NULL);//we start with only the sensor and there according rooms
-    fclose(sensor_map);
+    ERROR_HANDLER(fclose(sensor_map),"Failed to close file");
     while(1){
         int res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                if(sbuffer_is_buffer_done_writing(buffer) == false)
-                    usleep(100000);//sleep for 10 ms
-                else{//there won't be anymore data added
+                if(sbuffer_is_buffer_done_writing(buffer) == true){//there won't be anymore data added
                     free(node);
                     free(data);
                     free(data_packed);
@@ -151,17 +130,16 @@ void *fast_reader_routine(void *arg){
                 }
             }
             else
-                printf("Failure reading from buffer\n");
+                DEBUG_PRINTF("Failure reading from buffer\n");
         }
         else{
             data_packed->id = data->id;
             data_packed->ts = data->ts;
             data_packed->value = data->value;
-            datamgr_add_new_sensor_data(*data_packed);
+            ERROR_HANDLER(datamgr_add_new_sensor_data(*data_packed)!=0,"Failed to add data to the datamgr");
             // printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
-        usleep(10);
     }
     datamgr_free();
     return NULL;
@@ -178,24 +156,19 @@ void start_threads(int port_nr){
     }
     arguments->buffer = buffer;
     arguments->port_nr = port_nr;
-    void *writer_result = NULL;
-    void *reader_slow_result = NULL;
-    void *reader_fast_result = NULL;
-    pthread_create(&writer,NULL,writer_start_routine,arguments);
-    pthread_create(&reader_slow,NULL,slow_reader_routine,arguments);
-    pthread_create(&reader_fast,NULL,fast_reader_routine,arguments);
-    pthread_join(writer,&writer_result);
-    pthread_join(reader_fast,&reader_fast_result);
-    pthread_join(reader_slow,&reader_slow_result);
+
+    pthread_create(&writer,NULL,tcp_listener_routine,arguments);
+    pthread_create(&reader_slow,NULL,database_reader_routine,arguments);
+    pthread_create(&reader_fast,NULL,datamgr_reader_routine,arguments);
+    pthread_join(writer,NULL);
+    pthread_join(reader_fast,NULL);
+    pthread_join(reader_slow,NULL);
     sbuffer_free(&buffer);
     free(arguments);
-    // free(writer_result);
-    // free(reader_fast_result);
-    // free(reader_slow_result);
 }
 
 void start_logger(FILE* fifo){
-    printf("Logger started\n");
+    DEBUG_PRINTF("Logger started\n");
     int log_count = 0;
     int MAX_BUFFER_SIZE = 150;
     char receive_buffer[MAX_BUFFER_SIZE];//set in header file with define
@@ -208,12 +181,9 @@ void start_logger(FILE* fifo){
         pthread_mutex_unlock(&lock);
         if(str_result != NULL){
             //received something
-            str_result[strcspn(str_result, "\n")] = 0;//haal de newline character van str_result
-            time(&time_v);//set timer variable to current time
-            if(fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result)< 0){
-                printf("Couldn't write to the gateway log file but we did receive something\n");
-                exit(EXIT_FAILURE);
-            }
+            str_result[strcspn(str_result, "\n")] = 0;//remove the newline character from str_result
+            time(&time_v);
+            ERROR_HANDLER(fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result)< 0,"Couldn't write to the gateway log file but we did receive something\n");
             log_count++;
         }
     }
@@ -224,7 +194,6 @@ void start_logger(FILE* fifo){
         printf("Logger couldn't close fifo\n");
     }
     fclose(gateway);
-    // waitpid(getppid(),0,0);
     printf("Everything synced up and closed\n");
     exit(EXIT_SUCCESS);
 
@@ -242,33 +211,22 @@ int main(int argc,char *argv[]){
 
     char* fifo_path = "path_to_fifo";
     if(mkfifo(fifo_path,0666) != 0){
-        ERROR_HANDLER(errno == EEXIST,"Failed to create fifo and it doesn't exist already either");
-        if(errno != EEXIST){
-            printf("Failed to create fifo and it doesn't exist already either\n");
-            exit(EXIT_FAILURE);
-        }
+        ERROR_HANDLER(errno != EEXIST,"Failed to create fifo and it doesn't exist already either");
     }
     pid_t childPid = fork();
     if(childPid == 0){
         //child process
         FILE* fifo = fopen(fifo_path,"r");
-        if(fifo == NULL){
-            printf("Failed to open the fifo to write data to it\n");
-            exit(EXIT_FAILURE);
-        }
+        ERROR_HANDLER(fifo == NULL,"Failed to open the fifo to write data to it\n");
         start_logger(fifo);
-        printf("logging process finished\n");
     }
     else{
         //parent
         fifo_descr_wr = fopen(fifo_path,"w");
-        if(fifo_descr_wr == NULL){
-            printf("Failed to open the fifo to write data to it\n");
-            exit(EXIT_FAILURE);
-        }
+        ERROR_HANDLER(fifo_descr_wr == NULL,"Failed to open the fifo to write data to it\n");
         start_threads(port_nr);   
         fclose(fifo_descr_wr); 
-        printf("main process finished \n");
+        DEBUG_PRINTF("main process finished \n");
         waitpid(childPid,0,0);
         exit(EXIT_SUCCESS); 
     }   
