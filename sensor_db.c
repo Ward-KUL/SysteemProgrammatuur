@@ -135,22 +135,6 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
 
 }
 
-int insert_sensor_from_file(DBCONN *conn, FILE *sensor_data){
-    sensor_data_packed_t data_formatted;
-    int rcB = SQLITE_OK;
-    while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,sensor_data)>0){        
-        int rc = insert_sensor(conn,data_formatted.id,data_formatted.value,data_formatted.ts);   
-
-        if(rc != SQLITE_OK){
-            //failed to insert
-            check_for_SQLOK(rc,conn,0);
-            printf("%d",rc);
-            rcB = rc;   
-        }
-    }
-    return rcB;
-}
-
 int find_sensor_all(DBCONN *conn, callback_t f){
     char* querry;
     asprintf(&querry,"%s %s","Select * from", TO_STRING(TABLE_NAME));

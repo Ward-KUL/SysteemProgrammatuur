@@ -37,7 +37,7 @@ void write_to_logger(char* to_write){
     printf("LOGGER: %s\n",to_write);
     if(fifo_descr_wr == NULL){
         printf("Couldn't write to fifo because pointer is NULL\n");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE); 
     }
     char *send_buf;
     asprintf(&send_buf,"%s\n",to_write);

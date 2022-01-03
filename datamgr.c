@@ -99,6 +99,7 @@ void add_new_measurement_to_average(sensor_node_t* node,sensor_value_t new_value
             sum += node->average_data->run_avg[i];
         }
         sum = sum/RUN_AVG_LENGTH;
+        printf("Average is %f\n",sum);
         char* buffer;
         if(SET_MAX_TEMP < sum){
             asprintf(&buffer,"The sensor node with %d reports it's too hot(running avg temperature = %f)",node->id_sensor,sum);
@@ -156,7 +157,7 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     node_list = dpl_create(NULL,node_free,node_compare);
     //create the list with the sensors
     sensor_node_t* node = malloc(sizeof(sensor_node_t));
-    while(fscanf(fp_sensor_map,"%hd %hd",&(node->id_room),&(node->id_sensor))>0){
+    while(fscanf(fp_sensor_map,"%hi %hi",&(node->id_room),&(node->id_sensor))>0){
         node->average_data = get_default_avg();
         node->last_modified = 0;
         dpl_insert_sorted(node_list,node,false);

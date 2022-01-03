@@ -58,17 +58,86 @@ active_connection_t* get_conn(tcpsock_t* sock){
 //global variables
 bool server_running = false;
 
+
 void connmgr_free(){
     server_running = false;
     printf("Server closed externally\n");
+}
+
+void tcp_error_received(active_connection_t* conn){
+    char* buffer;
+    asprintf(&buffer,"Error while receiving info from sensor with id: %d",conn->id);
+    write_to_logger(buffer);
+    free(buffer);
+}
+
+void check_if_first_connection(active_connection_t* client_conn,int id){
+    if(client_conn->id == 0){
+        client_conn->id = id;
+        char* buffer;
+        asprintf(&buffer,"A sensor with id: %d has opened a new connection",id);
+        write_to_logger(buffer);
+        free(buffer);
+    }
+}
+
+int receive_via_tcp(active_connection_t* client_conn,sbuffer_t* buffer){
+    int bytes,result;
+    tcpsock_t* client = client_conn->socket;
+    sensor_data_t data;
+    // read sensor ID
+    bytes = sizeof(data.id);
+    result = tcp_receive(client, (void *) &data.id, &bytes);
+    if(result != TCP_NO_ERROR){
+        tcp_error_received(client_conn);
+        return result;
+    }
+    // read temperature
+    bytes = sizeof(data.value);
+    result = tcp_receive(client, (void *) &data.value, &bytes);
+    if(result!=TCP_NO_ERROR){
+        tcp_error_received(client_conn);
+        return result;
+    }
+    // read timestamp
+    bytes = sizeof(data.ts);
+    result = tcp_receive(client, (void *) &data.ts, &bytes);
+    if(result != TCP_NO_ERROR){
+        tcp_error_received(client_conn);
+        return result;
+    }
+    check_if_first_connection(client_conn,data.id);
+    sbuffer_insert(buffer,&data);
+    return TCP_NO_ERROR;
+}
+
+void receive_from_client(active_connection_t* client_conn,dplist_t* tcp_list,sbuffer_t* buffer){
+    time(&(client_conn->ts));
+    int result = receive_via_tcp(client_conn,buffer);
+    if(result != TCP_NO_ERROR){
+        //the connection should be broken off
+        if (result == TCP_CONNECTION_CLOSED){
+            char* buffer;
+            asprintf(&buffer,"The sensor node with id: %d has closed the connection",client_conn->id);
+            write_to_logger(buffer);
+            free(buffer);
+        }
+        else{
+            char* buffer;
+            asprintf(&buffer,"An error occured on sensor node with id: %d",client_conn->id);
+            write_to_logger(buffer);
+            free(buffer);
+        }
+        //remove client from the list of active clients
+        tcp_close(&(client_conn->socket));
+        dpl_remove_element(tcp_list,client_conn,true);
+    }
 }
 
 void connmgr_listen(int port_number,sbuffer_t* buffer){
     server_running = true;
 
     tcpsock_t *server, *client;
-    sensor_data_t data;
-    int bytes, result;
     int conn_counter = 0;
     dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); 
 
@@ -121,51 +190,11 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
                         dpl_insert_at_index(tcp_list,get_conn(client),99,false);
                     }
                     else{
-                        //iets op de clients veranderd
+                        //receive from client
                         active_connection_t* client_conn = dpl_get_element_at_index(tcp_list,x);
-                        do {
-                            client = client_conn->socket;
-                            time(&(client_conn->ts));
-                            // read sensor ID
-                            bytes = sizeof(data.id);
-                            result = tcp_receive(client, (void *) &data.id, &bytes);
-                            // read temperature
-                            bytes = sizeof(data.value);
-                            result = tcp_receive(client, (void *) &data.value, &bytes);
-                            // read timestamp
-                            bytes = sizeof(data.ts);
-                            result = tcp_receive(client, (void *) &data.ts, &bytes);
-                            if ((result == TCP_NO_ERROR) && bytes) {
-                                sbuffer_insert(buffer,&data);
-                            }
-                            //received a complete package from a sensor -> let's listen for other sensors
-                            if(client_conn->id == 0){
-                                client_conn->id = data.id;
-                                char* buffer;
-                                asprintf(&buffer,"A sensor with id: %d has opened a new connection",data.id);
-                                write_to_logger(buffer);
-                                free(buffer);
-                            }
-                            break;
-                        } while (result == TCP_NO_ERROR);
-                        if(result != TCP_NO_ERROR){
-                            //the connection should be broken off
-                            if (result == TCP_CONNECTION_CLOSED){
-                                char* buffer;
-                                asprintf(&buffer,"The sensor node with id: %d has closed the connection",client_conn->id);
-                                write_to_logger(buffer);
-                                free(buffer);
-                            }
-                            else{
-                                char* buffer;
-                                asprintf(&buffer,"An error occured on sensor node with id: %d",client_conn->id);
-                                write_to_logger(buffer);
-                                free(buffer);
-                            }
-                            //remove client from the list of active clients
-                            tcp_close(&(client_conn->socket));
-                            dpl_remove_element(tcp_list,client_conn,true);
-                        }
+                        receive_from_client(client_conn,tcp_list,buffer);
+                        //     break;
+                        // } while (result == TCP_NO_ERROR); 
                     }
                 }
                 
