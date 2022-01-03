@@ -54,7 +54,7 @@ void write_file(sbuffer_t* buffer){
         sensor_data_t* data = convert_sensor(data_formatted);
         ERROR_HANDLER(sbuffer_insert(buffer,data)!=SBUFFER_SUCCESS,"Failed to write to buffer");
         free(data);
-        DEBUG_PRINTF("inserted the following in the buffer:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
+        // DEBUG_PRINTF("inserted the following in the buffer:  sensor_id: %d, ts: %ld, value %f\n",data_formatted.id,data_formatted.ts,data_formatted.value);
     }
     fclose(file);
     ERROR_HANDLER(sbuffer_done_writing(buffer)!= SBUFFER_SUCCESS,"Couldn't stop the writing process of the buffer");
@@ -97,7 +97,7 @@ void *database_reader_routine(void *arg){
         }
         else{
             ERROR_HANDLER(insert_sensor(conn,data->id,data->value,data->ts)!=0,"Failed to insert new record");
-            DEBUG_PRINTF("database inserted the following data:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
+            // DEBUG_PRINTF("database inserted the following data:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
         }
     }
     disconnect(conn);
@@ -150,20 +150,17 @@ void start_threads(int port_nr){
     pthread_t writer,reader_slow,reader_fast;
     argument_thread_t* arguments = malloc(sizeof(argument_thread_t));
     sbuffer_t* buffer;
-    if(sbuffer_init(&buffer) != 0){
-        printf("failed to initialize the buffer\n");
-        exit(EXIT_FAILURE);
-    }
+    ERROR_HANDLER(sbuffer_init(&buffer) != 0,"failed to initialize the buffer");
     arguments->buffer = buffer;
     arguments->port_nr = port_nr;
 
-    pthread_create(&writer,NULL,tcp_listener_routine,arguments);
-    pthread_create(&reader_slow,NULL,database_reader_routine,arguments);
-    pthread_create(&reader_fast,NULL,datamgr_reader_routine,arguments);
-    pthread_join(writer,NULL);
-    pthread_join(reader_fast,NULL);
-    pthread_join(reader_slow,NULL);
-    sbuffer_free(&buffer);
+    ERROR_HANDLER(pthread_create(&writer,NULL,tcp_listener_routine,arguments)!=0,"Failed to create thread");
+    ERROR_HANDLER(pthread_create(&reader_slow,NULL,database_reader_routine,arguments)!=0,"Failed to create thread");
+    ERROR_HANDLER(pthread_create(&reader_fast,NULL,datamgr_reader_routine,arguments)!=0,"Failed to create thread");
+    ERROR_HANDLER(pthread_join(writer,NULL)!=0,"Failed to join thread");
+    ERROR_HANDLER(pthread_join(reader_fast,NULL)!=0,"Failed to join thread");
+    ERROR_HANDLER(pthread_join(reader_slow,NULL)!=0,"Failed to join thread");
+    ERROR_HANDLER(sbuffer_free(&buffer)!=SBUFFER_SUCCESS,"Failed to free buffer");
     free(arguments);
 }
 
