@@ -42,6 +42,7 @@ int sbuffer_free(sbuffer_t **buffer) {
     if ((buffer == NULL) || (*buffer == NULL)) {
         return SBUFFER_FAILURE;
     }
+    pthread_mutex_destroy(&((*buffer)->lock));
     while ((*buffer)->head) {
         sbuffer_node_t *dummy;
         dummy = (*buffer)->head;
@@ -60,11 +61,11 @@ int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_
         //first time the buffer is read
         *node = buffer->head;
         *data = (*node)->data;
+        pthread_mutex_lock(&(buffer->lock));
         if((*node)->has_been_read == false){
-            pthread_mutex_lock(&(buffer->lock));
             (*node)->has_been_read = true;
-            pthread_mutex_unlock(&(buffer->lock));
         }
+        pthread_mutex_unlock(&(buffer->lock));
         return SBUFFER_SUCCESS;
     }
     else{
@@ -74,20 +75,20 @@ int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_
         }
         pthread_mutex_lock(&(buffer->lock));
         if((*node)->next->has_been_read == false){
-            pthread_mutex_unlock(&(buffer->lock));
             *node = (*node)->next;
             *data = (*node)->data;
+            pthread_mutex_unlock(&(buffer->lock));
             return SBUFFER_SUCCESS;
         }
         else{
-            //second thread needs to read and remove data
+            //second thread needs to read and remove data, the first one has read already so no need to lock
+            pthread_mutex_unlock(&(buffer->lock));
             (*node)->next->has_been_read = true;
             sbuffer_node_t* temp = (*node)->next;
             free(*node);
             *node = temp;
             buffer->head = (*node)->next;//zou mss ook gewoon al node->next kunnen zijn
             *data = (*node)->data;
-            pthread_mutex_unlock(&(buffer->lock));
             return SBUFFER_SUCCESS;
         }
 

@@ -2,7 +2,6 @@
  * \author Ward Smets
  */
 
-#define _DEFAULT_SOURCE//for usleep
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -29,7 +28,6 @@ struct active_connection{
  */
 struct tcpsock{
     long cookie;        /**< if the socket is bound, cookie should be equal to MAGIC_COOKIE */
-    // remark: the use of magic cookies doesn't guarantee a 'bullet proof' test
     int sd;             /**< socket descriptor */
     char *ip_addr;      /**< socket IP address */
     int port;           /**< socket port number */
@@ -59,7 +57,7 @@ bool server_running = false;
 
 void connmgr_free(){
     server_running = false;
-    printf("Server closed externally\n");
+    DEBUG_PRINTF("Server closed externally\n");
 }
 
 void tcp_error_received(active_connection_t* conn){
@@ -142,10 +140,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
     int conn_counter = 0;
     dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); 
     write_to_logger("Test server has started");
-    if (tcp_passive_open(&server, port_number) != TCP_NO_ERROR){
-        write_to_logger("Couldn't open the tcp_listener on the requested port");
-        exit(EXIT_FAILURE);
-    } 
+    ERROR_HANDLER(tcp_passive_open(&server, port_number) != TCP_NO_ERROR,"Couldn't open the tcp_listener on the requested port");
     active_connection_t* server_conn = get_conn(server);
     dpl_insert_at_index(tcp_list,server_conn,99,false);
     do {
@@ -205,7 +200,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
         usleep(100);
     } while (server_running);//keep tcp_listener running while the flag is high
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
-    write_to_logger("Test server is shutting down");
+    write_to_logger("Connection manager is shutting down");
     dpl_free(&tcp_list,true);
     sbuffer_done_writing(buffer);
 }
