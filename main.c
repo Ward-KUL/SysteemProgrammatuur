@@ -43,6 +43,10 @@ void write_to_logger(char* to_write){
     free(send_buf);
 }
 
+void yield_cpu(){
+    pthread_yield();
+}
+
 sensor_data_t* convert_sensor(sensor_data_packed_t orig){
     sensor_data_t* converted = malloc(sizeof(sensor_data_t));
     converted->id = orig.id;
@@ -81,6 +85,10 @@ void *database_reader_routine(void *arg){
                     free(data);
                     break;
                 }
+                else{
+                    //no data available yet
+                    yield_cpu();
+                }
             }
             else
                 DEBUG_PRINTF("Failure reading from buffer\n");
@@ -118,6 +126,10 @@ void *datamgr_reader_routine(void *arg){
                     free(data_packed);
                     break;
                 }
+                else{
+                    //no data available yet
+                    yield_cpu();
+                }
             }
             else
                 DEBUG_PRINTF("Failure reading from buffer\n");
@@ -130,6 +142,7 @@ void *datamgr_reader_routine(void *arg){
             // printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
 
         }
+        yield_cpu();//the database manager can run behind
     }
     datamgr_free();
     return NULL;
@@ -175,6 +188,7 @@ void start_logger(FILE* fifo,char* fifo_exit_code){
             ERROR_HANDLER(fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result)< 0,"Couldn't write to the gateway log file but we did receive something\n");
             log_count++;
         }
+        yield_cpu();
     }
     while(strcmp(str_result,fifo_exit_code) != 0);
     DEBUG_PRINTF("logger closes\n");

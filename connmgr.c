@@ -204,6 +204,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             write_to_logger("Server timed out");
             break;
         }
+        yield_cpu();
     } while (server_running);//keep tcp_listener running while the flag is high
     ERROR_HANDLER(tcp_close(&server) != TCP_NO_ERROR,"Failed to close server tcp connection");
     write_to_logger("Test server is shutting down");
