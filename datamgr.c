@@ -33,52 +33,13 @@ dplist_t* node_list;
 /**
  *  Functions
  */
-void* element_copy(void * element);
-void element_free(void ** element);
-int element_compare(void * x, void * y);
 void node_free(void** node);
 int node_compare(void * x, void * y);
-void int_free(void** element);
-void* int_copy(void* element);
-int int_compare(void* x, void* y);
 void print_sensor(sensor_data_t* sensor);
 void parse_line_to_sensor_node(char* line);
 sensor_node_t* find_sensor_id(sensor_id_t id);
 size_t get_size_of_array(sensor_value_t* array);
 
-void * element_copy(void * element) {
-    sensor_data_t* copy = malloc(sizeof (sensor_data_t));
-    ERROR_HANDLER(copy!=NULL,"Failed to malloc memory");
-    copy->id = ((sensor_data_t*)element)->id;
-    copy->ts = ((sensor_data_t*)element)->ts;
-    copy->value = ((sensor_data_t*)element)->value;
-    return (void *) copy;
-}
-
-void element_free(void ** element) {
-    free(((sensor_node_t*)element)->average_data);
-    free(*element);
-    *element = NULL;
-}
-
-int element_compare(void * x, void * y) {
-    return ((((sensor_data_t*)x)->id < ((sensor_data_t*)y)->id) ? -1 : (((sensor_data_t*)x)->id == ((sensor_data_t*)y)->id) ? 0 : 1);
-}
-
-void int_free(void** element){
-    free(*element);
-    *element = NULL;
-    return;
-}
-void* int_copy(void* element){
-    sensor_data_t* copy = malloc(sizeof(sensor_data_t));
-    ERROR_HANDLER(copy!=NULL,"Failed to malloc memory");
-    return (void*) copy;
-}
-
-int int_compare(void* x, void* y){
-    return (x<y ? -1: x == y ? 0: 1);
-}
 
 void node_free(void** node){
     average_data_t* run_avg = ((sensor_node_t*)*node)->average_data;
@@ -159,7 +120,7 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
     node_list = dpl_create(NULL,node_free,node_compare);
     //create the list with the sensor nodes
     sensor_node_t* node = malloc(sizeof(sensor_node_t));
-    while(fscanf(fp_sensor_map,"%hi %hi",&(node->id_room),&(node->id_sensor))>0){
+    while(fscanf(fp_sensor_map,"%hu %hu",&(node->id_room),&(node->id_sensor))>0){
         node->average_data = get_default_avg();
         node->last_modified = 0;
         dpl_insert_sorted(node_list,node,false);

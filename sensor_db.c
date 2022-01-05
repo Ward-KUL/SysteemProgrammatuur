@@ -29,18 +29,6 @@ int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
     return rc;
 }
 
-int check_for_SQLOK(int rc,DBCONN* conn,char interrupt_on_error){
-    if(rc != SQLITE_OK){
-        char* msg;
-        asprintf(&msg,"Problem loading the data:%s",sqlite3_errmsg(conn));
-        write_to_logger(msg);
-        free(msg);
-        if(interrupt_on_error == 1)
-            exit(EXIT_FAILURE);
-    }
-    return rc;
-}
-
 int get_result_of_querry(DBCONN* conn,char* querry,callback_t f){
     char* err_msg;
     int rc = sqlite3_exec(conn,querry,f,0,&err_msg);

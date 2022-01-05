@@ -47,14 +47,6 @@ void yield_cpu(){
     pthread_yield();
 }
 
-sensor_data_t* convert_sensor(sensor_data_packed_t orig){
-    sensor_data_t* converted = malloc(sizeof(sensor_data_t));
-    converted->id = orig.id;
-    converted->ts = orig.ts;
-    converted->value = orig.value;
-    return converted;
-}
-
 void *tcp_listener_routine(void *arg){
     DEBUG_PRINTF("tcp_listener routine called\n");
     argument_thread_t* arguments = arg;
@@ -205,6 +197,9 @@ int main(int argc,char *argv[]){
         printf("FAILED TO START PROGRAM \n\n\nNeed the tcp port number\ne.g:./gateway 5678");
         exit(EXIT_SUCCESS);
     }
+    else{
+        printf("Program has started\n");
+    }
     int port_nr = atoi(argv[1]);
     //mutex lock is globally defined
     pthread_mutex_init(&lock,NULL);
@@ -229,6 +224,7 @@ int main(int argc,char *argv[]){
         fclose(fifo_descr_wr); 
         DEBUG_PRINTF("main process finished \n");
         waitpid(childPid,0,0);
+        printf("Program has closed\n");
         exit(EXIT_SUCCESS); 
     }   
     return 0;
