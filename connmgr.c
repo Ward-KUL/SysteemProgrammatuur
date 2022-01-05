@@ -20,7 +20,7 @@
  * container object that contains info about a tcp connection
  */
 struct active_connection{
-    tcpsock_t* socket;//contains the tcp socket 
+    tcpsock_t** socket;//contains the tcp socket 
     time_t ts;//contains the last timestamp
     sensor_id_t id;//contains the sensor id
 };
@@ -47,7 +47,7 @@ void free_tcp(void** tcp){
 
 active_connection_t* get_conn(tcpsock_t* sock){
     active_connection_t* conn = malloc(sizeof(active_connection_t));
-    conn->socket = sock;
+    conn->socket = &sock;
     time(&(conn->ts));
     conn->id = 0;
     return conn;
@@ -66,7 +66,7 @@ void connmgr_free(){
 dplist_t* close_connection(active_connection_t* conn,dplist_t* tcp_list){
     int index = dpl_get_index_of_element(tcp_list,conn);
     if(index != -1){
-        ERROR_HANDLER(tcp_close(&(conn->socket))!=TCP_NO_ERROR,"Failed to close tcp connection");
+        // tcp_close((conn->socket));
         dpl_remove_at_index(tcp_list,index,true);
     }
     return tcp_list;
@@ -91,7 +91,7 @@ void check_if_first_connection(active_connection_t* client_conn,int id){
 
 int receive_via_tcp(active_connection_t* client_conn,sbuffer_t* buffer){
     int bytes,result;
-    tcpsock_t* client = client_conn->socket;
+    tcpsock_t* client = *(client_conn->socket);
     sensor_data_t data;
     // read sensor ID
     bytes = sizeof(data.id);
@@ -158,7 +158,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
         for(int i = 0;i<conn_counter;i++){
             // add new fds to the fds to be polled
             active_connection_t* temp = dpl_get_element_at_index(tcp_list,i);
-            tcp_get_sd(temp->socket,&fds[i].fd);
+            tcp_get_sd(*(temp->socket),&fds[i].fd);
             fds[i].events = POLLIN;
         }
         int ret = poll(fds,conn_counter,TIMEOUT*1000);
