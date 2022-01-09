@@ -36,6 +36,11 @@ struct tcpsock{
 
 
 
+//global variables
+bool server_running = false;
+
+
+
 void free_tcp(void** tcp){
     active_connection_t* conn = (active_connection_t*)(*tcp);
     //the socket is freed automatically
@@ -50,10 +55,6 @@ active_connection_t* get_conn(tcpsock_t* sock){
     conn->id = 0;
     return conn;
 }
-
-
-//global variables
-bool server_running = false;
 
 
 void connmgr_free(){
@@ -134,10 +135,52 @@ void receive_from_client(active_connection_t* client_conn,dplist_t* tcp_list,sbu
     }
 }
 
+void remove_timed_out_connections(int conn_counter,dplist_t* tcp_list,struct pollfd fds[]){
+    for(int i = 1; i<conn_counter;i++){ //and skip the server
+        active_connection_t* conn = dpl_get_element_at_index(tcp_list,i);
+        time_t timer;
+        time(&timer);
+        if((timer - conn->ts) > TIMEOUT){
+            char* buffer;
+            asprintf(&buffer,"The sensor node with id: %d has timed out",conn->id);
+            write_to_logger(buffer);
+            free(buffer);
+            //the connection has timed out
+            tcp_close(&(conn->socket));
+            dpl_remove_at_index(tcp_list,i,true);
+            //remove the result list of connections to poll
+            fds[i].revents = 0;
+            fds[i].fd = -1;
+            fds[i].events = 0;
+        }
+    }
+}
+
+void check_changed_connection(struct pollfd fds[],int conn_counter,tcpsock_t* server,dplist_t* tcp_list,sbuffer_t* buffer){
+    tcpsock_t* client;
+    for(int x = 0;x<conn_counter;x++){
+        if(fds[x].revents & POLLIN){
+            fds[x].revents = 0; //clear the flag again
+            fds[x].events = 0;
+            fds[x].fd = -1;
+            if(x == 0){
+                //new connection
+                if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
+                dpl_insert_at_index(tcp_list,get_conn(client),99,false);
+            }
+            else{
+                //receive from client
+                active_connection_t* client_conn = dpl_get_element_at_index(tcp_list,x);
+                receive_from_client(client_conn,tcp_list,buffer);
+            }
+        }
+    }     
+}
+
 void connmgr_listen(int port_number,sbuffer_t* buffer){
     server_running = true;
 
-    tcpsock_t *server, *client;
+    tcpsock_t *server;
     dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); 
     write_to_logger("Test server has started");
     ERROR_HANDLER(tcp_passive_open(&server, port_number) != TCP_NO_ERROR,"Couldn't open the tcp_listener on the requested port");
@@ -154,45 +197,9 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             fds[i].events = POLLIN;
         }
         int ret = poll(fds,conn_counter,TIMEOUT*1000);
-        //remove the timed out connections
-        for(int i = 1; i<conn_counter;i++){ //and skip the server
-            active_connection_t* conn = dpl_get_element_at_index(tcp_list,i);
-            time_t timer;
-            time(&timer);
-            if((timer - conn->ts) > TIMEOUT){
-                char* buffer;
-                asprintf(&buffer,"The sensor node with id: %d has timed out",conn->id);
-                write_to_logger(buffer);
-                free(buffer);
-                //the connection has timed out
-                tcp_close(&(conn->socket));
-                dpl_remove_at_index(tcp_list,i,true);
-                //remove the result list of connections to poll
-                fds[i].revents = 0;
-                fds[i].fd = -1;
-                fds[i].events = 0;
-            }
-        }
-        //something has happened -> check which connection
-        if(ret>0){
-            for(int x = 0;x<conn_counter;x++){
-                if(fds[x].revents & POLLIN){
-                    fds[x].revents = 0; //clear the flag again
-                    fds[x].events = 0;
-                    fds[x].fd = -1;
-                    if(x == 0){
-                        //new connection
-                        if (tcp_wait_for_connection(server, &client) != TCP_NO_ERROR) exit(EXIT_FAILURE);
-                        dpl_insert_at_index(tcp_list,get_conn(client),99,false);
-                    }
-                    else{
-                        //receive from client
-                        active_connection_t* client_conn = dpl_get_element_at_index(tcp_list,x);
-                        receive_from_client(client_conn,tcp_list,buffer);
-                    }
-                }
-            }
-        }
+        remove_timed_out_connections(conn_counter,tcp_list,fds);
+        if(ret>0)
+            check_changed_connection(fds,conn_counter,server,tcp_list,buffer);
         else if(ret == 0){
             write_to_logger("Server timed out");
             break;

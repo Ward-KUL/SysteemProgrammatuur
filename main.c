@@ -25,7 +25,6 @@
 typedef struct argument_thread{
     sbuffer_t* buffer;
     int port_nr;
-    char* fifo_exit_code;
 }argument_thread_t;
 
 /**
@@ -52,7 +51,7 @@ void *tcp_listener_routine(void *arg){
     sbuffer_t* buffer = arguments->buffer;
     connmgr_listen(arguments->port_nr,buffer);
     connmgr_free();
-    write_to_logger(arguments->fifo_exit_code);
+    write_to_logger(FIFO_EXIT_CODE);
     return NULL;
 }
 
@@ -121,7 +120,7 @@ void *datamgr_reader_routine(void *arg){
     return NULL;
 }
 
-void start_threads(int port_nr,char* fifo_exit_code){
+void start_threads(int port_nr){
     DEBUG_PRINTF("Trying to start threads\n");
     pthread_t writer,reader_slow,reader_fast;
     argument_thread_t* arguments = malloc(sizeof(argument_thread_t));
@@ -129,7 +128,6 @@ void start_threads(int port_nr,char* fifo_exit_code){
     ERROR_HANDLER(sbuffer_init(&buffer) != 0,"failed to initialize the buffer");
     arguments->buffer = buffer;
     arguments->port_nr = port_nr;
-    arguments->fifo_exit_code = fifo_exit_code;
 
     ERROR_HANDLER(pthread_create(&writer,NULL,tcp_listener_routine,arguments)!=0,"Failed to create thread");
     ERROR_HANDLER(pthread_create(&reader_slow,NULL,database_reader_routine,arguments)!=0,"Failed to create thread");
@@ -141,7 +139,7 @@ void start_threads(int port_nr,char* fifo_exit_code){
     free(arguments);
 }
 
-void start_logger(FILE* fifo,char* fifo_exit_code){
+void start_logger(FILE* fifo){
     DEBUG_PRINTF("Logger started\n");
     int log_count = 0;
     int MAX_BUFFER_SIZE = 150;
@@ -164,7 +162,7 @@ void start_logger(FILE* fifo,char* fifo_exit_code){
         }
         pthread_yield();
     }
-    while(strcmp(str_result,fifo_exit_code) != 0);
+    while(strcmp(str_result,FIFO_EXIT_CODE) != 0);
     DEBUG_PRINTF("logger closes\n");
     ERROR_HANDLER(fclose(fifo) != 0,"Logger couldn't close fifo");
     ERROR_HANDLER(fclose(gateway)!=0,"Logger couldn't close gateway");
@@ -186,7 +184,6 @@ int main(int argc,char *argv[]){
     //mutex lock is globally defined
     pthread_mutex_init(&lock,NULL);
 
-    char* fifo_exit_code = "Close fifo code: 1@3ks93k4j32";
     char* fifo_path = "logFifo";
     if(mkfifo(fifo_path,0666) != 0){
         ERROR_HANDLER(errno != EEXIST,"Failed to create fifo and it doesn't exist already either");
@@ -196,13 +193,13 @@ int main(int argc,char *argv[]){
         //child process
         FILE* fifo = fopen(fifo_path,"r");
         ERROR_HANDLER(fifo == NULL,"Failed to open the fifo to write data to it\n");
-        start_logger(fifo,fifo_exit_code);
+        start_logger(fifo);
     }
     else{
         //parent
         fifo_descr_wr = fopen(fifo_path,"w");
         ERROR_HANDLER(fifo_descr_wr == NULL,"Failed to open the fifo to write data to it\n");
-        start_threads(port_nr,fifo_exit_code);   
+        start_threads(port_nr);   
         fclose(fifo_descr_wr); 
         DEBUG_PRINTF("main process finished \n");
         waitpid(childPid,0,0);
