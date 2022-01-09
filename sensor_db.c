@@ -9,7 +9,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <pthread.h>    
+#include <pthread.h>  
+
+
 
 
 int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
@@ -29,41 +31,47 @@ int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
     return rc;
 }
 
-
-DBCONN *init_connection(char clear_up_flag){
-
-    DBCONN *db = NULL;
-        
-    int rc = sqlite3_open(TO_STRING(DB_NAME),&db);
-
-    if(rc != SQLITE_OK){
-        write_to_logger("Unable to connect to SQL server");
-        sqlite3_close(db);
-        ERROR_HANDLER(1,"Unalbe to connect to SQL server");
-    }
-    else{
-        char* str = "Connection to SQL server established";
-        write_to_logger(str);
-    }
-
+int create_new_database(char clear_up_flag,DBCONN* db){
     if(clear_up_flag == 1){
         char* clear_tbl_stmt;
         asprintf(&clear_tbl_stmt,"%s %s %s","DROP TABLE IF EXISTS",TO_STRING(TABLE_NAME),";");
-        execute_sql_stmt(db,clear_tbl_stmt,0,0);
+        if(execute_sql_stmt(db,clear_tbl_stmt,0,0)!=SQLITE_OK) return SQLITE_ERROR;
         free(clear_tbl_stmt);
-
     }
-    
     char* sql_stmt ;
     asprintf(&sql_stmt,"%s %s %s","CREATE TABLE IF NOT EXISTS",TO_STRING(TABLE_NAME),"(id INTEGER PRIMARY KEY AUTOINCREMENT, sensor_id	INTEGER NOT NULL, sensor_value NUMERIC NOT NULL, timestamp INTEGER NOT NULL);");
-    execute_sql_stmt(db,sql_stmt,0,0);
+    if(execute_sql_stmt(db,sql_stmt,0,0)!=SQLITE_OK) return SQLITE_ERROR;
     free(sql_stmt);
     char* buffer;
     asprintf(&buffer,"New table %s created",TO_STRING(TABLE_NAME));
     write_to_logger(buffer);
     free(buffer);
-    
-    return db;
+    return SQLITE_OK;
+}
+
+
+DBCONN *init_connection(char clear_up_flag){
+
+    char* error_message = "No error";
+    for(int amount_of_tries = 0;amount_of_tries<3;amount_of_tries++){
+        DBCONN *db = NULL;
+            
+        int rc = sqlite3_open(TO_STRING(DB_NAME),&db);
+
+        if(rc != SQLITE_OK){
+            write_to_logger("Unable to connect to SQL server");
+            sqlite3_close(db);
+            error_message = "Unable to connect to SQL server";
+            continue;
+        }
+        write_to_logger("Connection to SQL server established");
+        if(create_new_database(clear_up_flag,db)!=SQLITE_OK){
+            error_message = "Unable to create new db file";
+            continue;
+        }
+        return db; 
+    }
+    ERROR_HANDLER(1,"%s",error_message);
 }
 
 
@@ -74,38 +82,50 @@ void disconnect(DBCONN *conn){
 }
 
 int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_t ts){
-    char* querry;
-    asprintf(&querry,"INSERT INTO %s %s", TO_STRING(TABLE_NAME),"(sensor_id,sensor_value,timestamp) VALUES(?,?,?)");
-    sqlite3_stmt* stmt = NULL;
-    int rc = sqlite3_prepare_v2(conn,querry,-1,&stmt,0);
-    if(rc != SQLITE_OK){
-        free(querry);
-        return rc;
-    }  
-    rc = sqlite3_bind_int(stmt,1,id);
-    if(rc != SQLITE_OK){
-        free(querry);
-        return rc;
-    }  
-    rc = sqlite3_bind_double(stmt,2,value);
-    if(rc != SQLITE_OK){
-        free(querry);
-        return rc;
-    } 
-    rc = sqlite3_bind_int64(stmt,3,(long int)ts);
-    if(rc != SQLITE_OK){
-        free(querry);
-        return rc;
-    } 
+    char* error_message = "No error";
+    for(int amount_of_tries = 0;amount_of_tries<3;amount_of_tries++){
+        char* querry;
+        asprintf(&querry,"INSERT INTO %s %s", TO_STRING(TABLE_NAME),"(sensor_id,sensor_value,timestamp) VALUES(?,?,?)");
+        sqlite3_stmt* stmt = NULL;
+        int rc = sqlite3_prepare_v2(conn,querry,-1,&stmt,0);
+        if(rc != SQLITE_OK){
+            free(querry);
+            error_message = "Failed to prepare query";
+            continue;
+        }  
+        rc = sqlite3_bind_int(stmt,1,id);
+        if(rc != SQLITE_OK){
+            free(querry);
+            error_message = "Failed to bind sensor id";
+            continue;
+        }  
+        rc = sqlite3_bind_double(stmt,2,value);
+        if(rc != SQLITE_OK){
+            free(querry);
+            error_message = "Failed to bind sensor value";
+            continue;
+        } 
+        rc = sqlite3_bind_int64(stmt,3,(long int)ts);
+        if(rc != SQLITE_OK){
+            free(querry);
+            error_message = "Failed to bind timestamp";
+            continue;
+        } 
 
-    rc = sqlite3_step(stmt);
-    free(querry);
-    if(rc != 101) //101 -> no more rows available, is logisch aangezien we gewoon een insert willen doen
-        return rc;
-    rc = sqlite3_finalize(stmt);
-    if(rc != SQLITE_OK) return rc;
-    return rc;//SQLITEOK = 0 -> rc is al de juiste waarde
-
+        rc = sqlite3_step(stmt);
+        free(querry);
+        if(rc != 101){ //101 -> no more rows available(insert only one row)
+            error_message = "Failed to execute insert";
+            continue;
+        }
+        rc = sqlite3_finalize(stmt);
+        if(rc != SQLITE_OK){
+            error_message = "Failed to finalize statement";
+            continue;
+        }
+        return SQLITE_OK;
+    }
+    ERROR_HANDLER(1,"%s",error_message);
 }
 
 
