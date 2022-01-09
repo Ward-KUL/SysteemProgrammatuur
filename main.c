@@ -66,20 +66,12 @@ void *database_reader_routine(void *arg){
     *node = NULL;
     argument_thread_t* arguments = arg;
     sbuffer_t* buffer = arguments->buffer;
-    while(1){
-        int res = sbuffer_read_and_remove(buffer,data,node);
+    int res = SBUFFER_SUCCESS;
+    do{
+        res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                if(sbuffer_is_buffer_done_writing(buffer) == true){
-                    //there won't be anymore data added
-                    free(node);
-                    free(data);
-                    break;
-                }
-                else{
-                    //no data available yet
-                    pthread_yield();
-                }
+                pthread_yield();
             }
             else
                 DEBUG_PRINTF("Failure reading from buffer\n");
@@ -89,6 +81,9 @@ void *database_reader_routine(void *arg){
         }
         pthread_yield();//the database manager can lag behind
     }
+    while(res != SBUFFER_NO_DATA || sbuffer_is_buffer_done_writing(buffer) == false);
+    free(node);
+    free(data);
     disconnect(conn);
     DEBUG_PRINTF("Database is done reading\n");
     return NULL;
@@ -107,20 +102,12 @@ void *datamgr_reader_routine(void *arg){
     ERROR_HANDLER(sensor_map == NULL,"Failed to open room_sensor.map");
     datamgr_parse_sensor_files(sensor_map,NULL);//we start with only the sensor and there according rooms
     ERROR_HANDLER(fclose(sensor_map),"Failed to close file");
-    while(1){
-        int res = sbuffer_read_and_remove(buffer,data,node);
+    int res = SBUFFER_SUCCESS;
+    do{
+        res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
             if(res == SBUFFER_NO_DATA){
-                if(sbuffer_is_buffer_done_writing(buffer) == true){//there won't be anymore data added
-                    free(node);
-                    free(data);
-                    free(data_packed);
-                    break;
-                }
-                else{
-                    //no data available yet
-                    pthread_yield();
-                }
+                pthread_yield();
             }
             else
                 DEBUG_PRINTF("Failure reading from buffer\n");
@@ -132,6 +119,10 @@ void *datamgr_reader_routine(void *arg){
             ERROR_HANDLER(datamgr_add_new_sensor_data(*data_packed)!=0,"Failed to add data to the datamgr");
         }
     }
+    while(res != SBUFFER_NO_DATA || sbuffer_is_buffer_done_writing(buffer) == false);
+    free(node);
+    free(data);
+    free(data_packed);
     datamgr_free();
     return NULL;
 }

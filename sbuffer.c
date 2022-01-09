@@ -107,7 +107,8 @@ int sbuffer_insert(sbuffer_t *buffer, sensor_data_t *data) {
     if (buffer->tail == NULL) // buffer is empty (buffer->head) should also be NULL
     {
         buffer->head = buffer->tail = dummy;
-    } else // buffer not empty
+    } 
+    else // buffer not empty
     {
         buffer->tail->next = dummy;
         buffer->tail = buffer->tail->next;
