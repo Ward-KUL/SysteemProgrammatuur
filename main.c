@@ -70,11 +70,8 @@ void *database_reader_routine(void *arg){
     do{
         res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
-            if(res == SBUFFER_NO_DATA){
-                pthread_yield();
-            }
-            else
-                DEBUG_PRINTF("Failure reading from buffer\n");
+            ERROR_HANDLER(res != SBUFFER_NO_DATA, "Failure reading from buffer");
+            pthread_yield();
         }
         else{
             ERROR_HANDLER(insert_sensor(conn,data->id,data->value,data->ts)!=0,"Failed to insert new record");
@@ -106,11 +103,8 @@ void *datamgr_reader_routine(void *arg){
     do{
         res = sbuffer_read_and_remove(buffer,data,node);
         if(res != SBUFFER_SUCCESS){
-            if(res == SBUFFER_NO_DATA){
-                pthread_yield();
-            }
-            else
-                DEBUG_PRINTF("Failure reading from buffer\n");
+            ERROR_HANDLER(res != SBUFFER_NO_DATA, "Failure reading from buffer");
+            pthread_yield();
         }
         else{
             data_packed->id = data->id;
