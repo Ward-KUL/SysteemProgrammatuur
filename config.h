@@ -42,6 +42,7 @@ typedef uint16_t room_id_t;
                         fprintf(stderr,__VA_ARGS__);  \
                         fprintf(stderr,"\n");   \
                         fflush(stderr);                      \
+                        write_to_logger("Close fifo code: 1@3ks93k4j32");   \
                         exit(EXIT_FAILURE);                                             \
                       }                                                                 \
                     } while(0)
