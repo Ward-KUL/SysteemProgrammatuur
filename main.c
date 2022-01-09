@@ -43,10 +43,6 @@ void write_to_logger(char* to_write){
     free(send_buf);
 }
 
-void yield_cpu(){
-    pthread_yield();
-}
-
 void *tcp_listener_routine(void *arg){
     DEBUG_PRINTF("tcp_listener routine called\n");
     argument_thread_t* arguments = arg;
@@ -79,7 +75,7 @@ void *database_reader_routine(void *arg){
                 }
                 else{
                     //no data available yet
-                    yield_cpu();
+                    pthread_yield();
                 }
             }
             else
@@ -87,8 +83,8 @@ void *database_reader_routine(void *arg){
         }
         else{
             ERROR_HANDLER(insert_sensor(conn,data->id,data->value,data->ts)!=0,"Failed to insert new record");
-            // DEBUG_PRINTF("database inserted the following data:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
         }
+        pthread_yield();//the database manager can lag behind
     }
     disconnect(conn);
     DEBUG_PRINTF("Database is done reading\n");
@@ -120,7 +116,7 @@ void *datamgr_reader_routine(void *arg){
                 }
                 else{
                     //no data available yet
-                    yield_cpu();
+                    pthread_yield();
                 }
             }
             else
@@ -131,10 +127,7 @@ void *datamgr_reader_routine(void *arg){
             data_packed->ts = data->ts;
             data_packed->value = data->value;
             ERROR_HANDLER(datamgr_add_new_sensor_data(*data_packed)!=0,"Failed to add data to the datamgr");
-            // printf("reader 2: data is:  sensor_id: %d, ts: %ld, value %f\n",data->id,data->ts,data->value);
-
         }
-        yield_cpu();//the database manager can run behind
     }
     datamgr_free();
     return NULL;
@@ -180,7 +173,7 @@ void start_logger(FILE* fifo,char* fifo_exit_code){
             ERROR_HANDLER(fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result)< 0,"Couldn't write to the gateway log file but we did receive something\n");
             log_count++;
         }
-        yield_cpu();
+        pthread_yield();
     }
     while(strcmp(str_result,fifo_exit_code) != 0);
     DEBUG_PRINTF("logger closes\n");

@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include "sbuffer.h"
 #include <unistd.h>
+#include <pthread.h>
 
 
 struct active_connection{
@@ -197,7 +198,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
             write_to_logger("Server timed out");
             break;
         }
-        yield_cpu();
+        pthread_yield();
     } while (server_running);//keep tcp_listener running while the flag is high
     if (tcp_close(&server) != TCP_NO_ERROR) exit(EXIT_FAILURE);
     write_to_logger("Connection manager is shutting down");
