@@ -138,7 +138,6 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
     server_running = true;
 
     tcpsock_t *server, *client;
-    int conn_counter = 0;
     dplist_t* tcp_list = dpl_create(NULL,free_tcp,NULL); 
     write_to_logger("Test server has started");
     ERROR_HANDLER(tcp_passive_open(&server, port_number) != TCP_NO_ERROR,"Couldn't open the tcp_listener on the requested port");
@@ -146,7 +145,7 @@ void connmgr_listen(int port_number,sbuffer_t* buffer){
     dpl_insert_at_index(tcp_list,server_conn,99,false);
     do {
         //create the pollfd with the descriptors of the to poll i/o connections
-        conn_counter = dpl_size(tcp_list);
+        int conn_counter = dpl_size(tcp_list);
         struct pollfd fds[conn_counter];
         for(int i = 0;i<conn_counter;i++){
             // add new fds to the fds to be polled

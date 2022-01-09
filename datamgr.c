@@ -143,30 +143,6 @@ void datamgr_free(){
     dpl_free(&node_list,true);
     node_list = NULL;
 }
-uint16_t datamgr_get_room_id(sensor_id_t sensor_id){
-    if(node_list == NULL) return -1;
-    sensor_node_t* node = find_sensor_id(sensor_id);
-    ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamg");
-    return node->id_room;
-}
-
-sensor_value_t datamgr_get_avg(sensor_id_t sensor_id){
-    if(node_list == NULL) return -1;
-    sensor_node_t* node = find_sensor_id(sensor_id);
-    ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamgr");
-    return node->average_data->previous_avg;
-}
-
-time_t datamgr_get_last_modified(sensor_id_t sensor_id){
-    if(node_list == NULL) return -1;
-    sensor_node_t* node = find_sensor_id(sensor_id);
-    ERROR_HANDLER(node == NULL,"Could not find the sensor id in the datamg");
-    return node->last_modified; 
-}
-
-int datamgr_get_total_sensors(){
-    return dpl_size(node_list);
-}
 
 //function that returns the sensor with the corresponding id from the internal list, returns NULL if sensor not found
 sensor_node_t* find_sensor_id(sensor_id_t id){

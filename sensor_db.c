@@ -29,14 +29,6 @@ int execute_sql_stmt(DBCONN* db, char* statement,int callback, char smt){
     return rc;
 }
 
-int get_result_of_querry(DBCONN* conn,char* querry,callback_t f){
-    char* err_msg;
-    int rc = sqlite3_exec(conn,querry,f,0,&err_msg);
-    return rc;
-}
-
-
-
 
 DBCONN *init_connection(char clear_up_flag){
 
@@ -114,46 +106,6 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
     if(rc != SQLITE_OK) return rc;
     return rc;//SQLITEOK = 0 -> rc is al de juiste waarde
 
-}
-
-int find_sensor_all(DBCONN *conn, callback_t f){
-    char* querry;
-    asprintf(&querry,"%s %s","Select * from", TO_STRING(TABLE_NAME));
-    int rc = get_result_of_querry(conn,querry,f);
-    free(querry);
-    return rc;
-}
-
-int find_sensor_by_value(DBCONN *conn, sensor_value_t value, callback_t f){
-    char* querry;
-    asprintf(&querry,"%s %s %s", "Select * from", TO_STRING(TABLE_NAME),"where sensor_value = 15");
-    int rc = get_result_of_querry(conn,querry,f);
-    free(querry);
-    return rc;
-}
-
-int find_sensor_exceed_value(DBCONN *conn, sensor_value_t value, callback_t f){
-    char* querry;
-    asprintf(&querry,"%s %s %s %f","Select * from",TO_STRING(TABLE_NAME),"where sensor_value > ",value);
-    int rc = get_result_of_querry(conn,querry,f);
-    free(querry);
-    return rc;
-}
-
-int find_sensor_by_timestamp(DBCONN *conn, sensor_ts_t ts, callback_t f){
-    char* querry;
-    asprintf(&querry,"%s %s %s %ld","Select * from",TO_STRING(TABLE_NAME),"where timestamp =",ts);
-    int r = get_result_of_querry(conn,querry,f);
-    free(querry);
-    return r;
-}
-
-int find_sensor_after_timestamp(DBCONN *conn, sensor_ts_t ts, callback_t f){
-    char* querry;
-    asprintf(&querry,"%s %s %s %ld","Select * from",TO_STRING(TABLE_NAME),"where timestamp >",ts);
-    int r = get_result_of_querry(conn,querry,f);
-    free(querry);
-    return r;
 }
 
 
