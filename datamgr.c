@@ -1,3 +1,6 @@
+/**
+ * \author Ward Smets
+ */
 #define _GNU_SOURCE
 
 #include <stdlib.h>

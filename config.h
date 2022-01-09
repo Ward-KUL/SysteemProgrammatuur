@@ -73,9 +73,5 @@ typedef struct {
  * @param to_write The string to be written
  */
 void write_to_logger(char* to_write);
-/**
- * @brief The thread has reached an end point, and other threads can use the cpu
- * 
- */
 
 #endif /* _CONFIG_H_ */

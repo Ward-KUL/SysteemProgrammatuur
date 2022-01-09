@@ -34,6 +34,7 @@ sensor_gateway_d : main.c connmgr.c datamgr.c sensor_db.c sbuffer.c lib/libdplis
 file_creator : file_creator.c
 	@echo "$(TITLE_COLOR)\n***** COMPILE & LINKING file_creator *****$(NO_COLOR)"
 	gcc file_creator.c -o file_creator -Wall -fdiagnostics-color=auto
+	./file_creator
 
 sensor_node : sensor_node.c lib/libtcpsock.so
 	@echo "$(TITLE_COLOR)\n***** COMPILING sensor_node *****$(NO_COLOR)"
@@ -66,16 +67,16 @@ clean:
 clean-all: clean
 	rm -rf lib/*.so
 
-run : sensor_gateway sensor_node
+run : sensor_gateway sensor_node file_creator
 	@echo "Add your own implementation here..."
 	./sensor_gateway 5678
-rund : sensor_gateway_d sensor_node
+rund : sensor_gateway_d sensor_node file_creator
 	@echo "Add your own implementation here..."
 	./sensor_gateway 5678
-gdb: sensor_gateway sensor_node
+gdb: sensor_gateway sensor_node file_creator
 	export CK_FORK=no; gdb -tui -q --args ./sensor_gateway 5678
 
-val:	sensor_gateway sensor_node
+val:	sensor_gateway sensor_node file_creator
 	valgrind --leak-check=full --show-leak-kinds=all ./sensor_gateway 5678
 
 

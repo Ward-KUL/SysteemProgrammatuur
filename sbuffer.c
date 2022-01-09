@@ -24,7 +24,7 @@ struct sbuffer {
     sbuffer_node_t *head;       /**< a pointer to the first node in the buffer */
     sbuffer_node_t *tail;       /**< a pointer to the last node in the buffer */
     pthread_mutex_t lock;   
-    bool done_writing;          //boolean to know when reading threads can stop reading
+    bool done_writing;          //boolean that will be set true once all dat is written
 };
 
 int sbuffer_init(sbuffer_t **buffer) {
@@ -87,7 +87,7 @@ int sbuffer_read_and_remove(sbuffer_t *buffer, sensor_data_t *data,sbuffer_node_
             sbuffer_node_t* temp = (*node)->next;
             free(*node);
             *node = temp;
-            buffer->head = (*node)->next;//zou mss ook gewoon al node->next kunnen zijn
+            buffer->head = (*node)->next;
             *data = (*node)->data;
             return SBUFFER_SUCCESS;
         }
@@ -104,7 +104,7 @@ int sbuffer_insert(sbuffer_t *buffer, sensor_data_t *data) {
     dummy->next = NULL;
     dummy->has_been_read = false;
     pthread_mutex_lock(&(buffer->lock));
-    if (buffer->tail == NULL) // buffer empty (buffer->head should also be NULL
+    if (buffer->tail == NULL) // buffer is empty (buffer->head) should also be NULL
     {
         buffer->head = buffer->tail = dummy;
     } else // buffer not empty

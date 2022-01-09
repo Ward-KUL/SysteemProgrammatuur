@@ -1,3 +1,6 @@
+/**
+ * \author Ward Smets
+ */
 #define _GNU_SOURCE
 
 #include "sensor_db.h"
@@ -59,7 +62,6 @@ DBCONN *init_connection(char clear_up_flag){
         int rc = sqlite3_open(TO_STRING(DB_NAME),&db);
 
         if(rc != SQLITE_OK){
-            write_to_logger("Unable to connect to SQL server");
             sqlite3_close(db);
             error_message = "Unable to connect to SQL server";
             pthread_yield();
@@ -73,6 +75,7 @@ DBCONN *init_connection(char clear_up_flag){
         }
         return db; 
     }
+    write_to_logger(error_message);
     ERROR_HANDLER(1,"%s",error_message);
 }
 
@@ -133,6 +136,7 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
         }
         return SQLITE_OK;
     }
+    write_to_logger(error_message);
     ERROR_HANDLER(1,"%s",error_message);
 }
 

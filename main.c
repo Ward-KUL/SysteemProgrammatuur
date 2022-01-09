@@ -1,3 +1,6 @@
+/**
+ * \author Ward Smets
+ */
 #define _GNU_SOURCE
 
 #include "sbuffer.h"
@@ -157,11 +160,12 @@ void start_logger(FILE* fifo,char* fifo_exit_code){
     DEBUG_PRINTF("Logger started\n");
     int log_count = 0;
     int MAX_BUFFER_SIZE = 150;
-    char receive_buffer[MAX_BUFFER_SIZE];//set in header file with define
+    char receive_buffer[MAX_BUFFER_SIZE];
     char* str_result = NULL;
     time_t time_v;
     FILE* gateway = fopen("gateway.log","w");
     ERROR_HANDLER(gateway == NULL, "Failed to open gateway.log");
+    ERROR_HANDLER(fprintf(gateway,"<sequence number> <timestamp> <log-event info message>\n")< 0,"Couldn't write to the gateway log file");
     do{       
         pthread_mutex_lock(&lock);
         str_result = fgets(receive_buffer,MAX_BUFFER_SIZE,fifo);
@@ -170,7 +174,7 @@ void start_logger(FILE* fifo,char* fifo_exit_code){
             //received something
             str_result[strcspn(str_result, "\n")] = 0;//remove the newline character from str_result
             time(&time_v);
-            ERROR_HANDLER(fprintf(gateway,"<%d> <%ld> <%s>\n",log_count,time_v,str_result)< 0,"Couldn't write to the gateway log file but we did receive something\n");
+            ERROR_HANDLER(fprintf(gateway,"%d %ld %s\n",log_count,time_v,str_result)< 0,"Couldn't write to the gateway log file but we did receive something");
             log_count++;
         }
         pthread_yield();
