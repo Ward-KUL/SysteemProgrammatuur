@@ -62,11 +62,13 @@ DBCONN *init_connection(char clear_up_flag){
             write_to_logger("Unable to connect to SQL server");
             sqlite3_close(db);
             error_message = "Unable to connect to SQL server";
+            pthread_yield();
             continue;
         }
         write_to_logger("Connection to SQL server established");
         if(create_new_database(clear_up_flag,db)!=SQLITE_OK){
             error_message = "Unable to create new db file";
+            pthread_yield();
             continue;
         }
         return db; 
@@ -91,24 +93,28 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
         if(rc != SQLITE_OK){
             free(querry);
             error_message = "Failed to prepare query";
+            pthread_yield();
             continue;
         }  
         rc = sqlite3_bind_int(stmt,1,id);
         if(rc != SQLITE_OK){
             free(querry);
             error_message = "Failed to bind sensor id";
+            pthread_yield();
             continue;
         }  
         rc = sqlite3_bind_double(stmt,2,value);
         if(rc != SQLITE_OK){
             free(querry);
             error_message = "Failed to bind sensor value";
+            pthread_yield();
             continue;
         } 
         rc = sqlite3_bind_int64(stmt,3,(long int)ts);
         if(rc != SQLITE_OK){
             free(querry);
             error_message = "Failed to bind timestamp";
+            pthread_yield();
             continue;
         } 
 
@@ -116,11 +122,13 @@ int insert_sensor(DBCONN *conn, sensor_id_t id, sensor_value_t value, sensor_ts_
         free(querry);
         if(rc != 101){ //101 -> no more rows available(insert only one row)
             error_message = "Failed to execute insert";
+            pthread_yield();
             continue;
         }
         rc = sqlite3_finalize(stmt);
         if(rc != SQLITE_OK){
             error_message = "Failed to finalize statement";
+            pthread_yield();
             continue;
         }
         return SQLITE_OK;
