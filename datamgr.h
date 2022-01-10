@@ -25,12 +25,10 @@
 
 /**
  * 
- *  This method holds the core functionality of your datamgr. It takes in 2 file pointers to the sensor files and parses them. 
- *  When the method finishes all data should be in the internal pointer list and all log messages should be printed to stderr.
+ *  Starts datamgr and parses the room,sensor map
  *  \param fp_sensor_map file pointer to the map file
- *  \param fp_sensor_data file pointer to the binary data file
  */
-void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data);
+void datamgr_parse_sensor_map(FILE *fp_sensor_map);
 
 /**
  * This method should be called to clean up the datamgr, and to free all used memory. 

@@ -96,7 +96,7 @@ void *datamgr_reader_routine(void *arg){
 
     FILE* sensor_map = fopen("room_sensor.map","r");
     ERROR_HANDLER(sensor_map == NULL,"Failed to open room_sensor.map");
-    datamgr_parse_sensor_files(sensor_map,NULL);//we start with only the sensor and there according rooms
+    datamgr_parse_sensor_map(sensor_map);
     ERROR_HANDLER(fclose(sensor_map),"Failed to close file");
     int res = SBUFFER_SUCCESS;
     do{

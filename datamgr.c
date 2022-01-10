@@ -116,7 +116,7 @@ int datamgr_add_new_sensor_data(sensor_data_packed_t data){
 }
 
 
-void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
+void datamgr_parse_sensor_map(FILE *fp_sensor_map){
 
     if(node_list != NULL) datamgr_free();
     //intialize the list
@@ -130,16 +130,7 @@ void datamgr_parse_sensor_files(FILE *fp_sensor_map, FILE *fp_sensor_data){
         node = malloc(sizeof(sensor_node_t));
     }
     free(node);
-    
-    //add recorded data to the sensor nodes
-    if(fp_sensor_data != NULL){
-        sensor_data_packed_t data_formatted;
-        while(fread(&data_formatted,sizeof(sensor_data_packed_t),1,fp_sensor_data)>0){
-            datamgr_add_new_sensor_data(data_formatted);
-        }
-    }
     return;   
-
 }
 
 void datamgr_free(){
